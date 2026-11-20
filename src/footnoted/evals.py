@@ -93,6 +93,45 @@ def run_answers(paths: list[Path], index: Index, limit: int | None = None) -> st
     return "\n".join(out)
 
 
+def run_memory(path: Path, index: Index, verbose: bool = False) -> str:
+    """Memory eval: is an expected page in the top 5 for the last turn, searched as typed versus
+    rewritten with memory?
+
+    followup  the last turn only makes sense given the turn before it (working memory)
+    session   the first turn states a fact in one session; the question comes in a new session
+    control   the last turn is already complete and the earlier turn is unrelated (must not get worse)
+    """
+    import tempfile
+
+    from .memory import Memory, standalone
+
+    embed = lambda text: next(iter(index.embedder.embed([text])))
+    cases = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+    hit = lambda case, query: any(h["doc"] in case["docs"] for h in index.search(query, case["corpus"], k=5))
+    tally: dict[str, list[tuple[bool, bool]]] = {}
+    notes = []
+    for case in cases:
+        *earlier, final = case["turns"]
+        with tempfile.TemporaryDirectory() as folder:  # every case starts with an empty memory
+            store = Path(folder) / "memory.db"
+            memory = Memory(embed, store)
+            for turn in earlier:
+                memory.add_turn(turn, "Noted." if case["kind"] == "session" else "(answered from the documentation)")
+            if case["kind"] == "session":
+                memory.flush()
+                memory = Memory(embed, store)  # a new session: nothing in working memory
+            rewritten = standalone(final, memory)
+        result = (hit(case, final), hit(case, rewritten))
+        tally.setdefault(case["kind"], []).append(result)
+        notes.append(f"  [{case['kind']}] {'ok ' if result[1] else 'MISS'} {final}\n      -> {rewritten}")
+        print(".", end="", flush=True)
+
+    out = ["", "| kind | questions | found as typed | found with memory |", "|---|---|---|---|"]
+    for kind, results in tally.items():
+        out.append(f"| {kind} | {len(results)} | {sum(a for a, _ in results)} | {sum(b for _, b in results)} |")
+    return "\n".join(out + ([""] + notes if verbose else []))
+
+
 def report(path: Path, results: list[dict], verbose: bool = False) -> str:
     out = [f"{path} ", "", "| mode | recall@1 | recall@5 | MRR@10 | p50 ms |", "|---|---|---|---|---|"]
     for r in results:

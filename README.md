@@ -15,6 +15,8 @@ uv run python tests/test_core.py
 ollama pull hf.co/Qwen/Qwen2.5-3B-Instruct-GGUF:Q4_K_M   # free local model, 2.1 GB
 uv run footnoted ask "How do I compute a SHA-256 digest?" --corpus python
 uv run footnoted eval-ask evals/python.jsonl evals/docs.jsonl evals/unanswerable.jsonl
+uv run footnoted chat --corpus python      # follow-up questions; remembers across sessions
+uv run footnoted eval-memory evals/memory.jsonl -v
 ```
 
 Any OpenAI-compatible endpoint works: set `FOOTNOTED_BASE_URL`, `FOOTNOTED_MODEL` and
@@ -126,6 +128,46 @@ Same 84 questions, two policies:
   came out 83 tokens over its budget; only the safety margin kept it inside the window. The
   estimate now uses the 5th percentile.
 - Memory and tool slots are implemented and tested but have nothing to hold yet.
+
+## Memory
+
+`footnoted chat` keeps three tiers of memory (`memory.py`):
+
+- **Working**: the last four turns, verbatim, for the current session.
+- **Episodes**: when turns leave working memory, or the session ends, the model compresses them
+  into a short summary.
+- **Facts**: durable statements about the user ("The user stores application data in SQLite"),
+  extracted in the same call.
+
+Episodes and facts are stored in SQLite with an embedding, an importance of 1 to 5 and an expiry
+date: 7 days per importance point for episodes, 30 for facts. Expired rows are deleted when a
+session starts, and a memory repeated in a later session refreshes the stored copy instead of
+adding a duplicate. Delete `data/memory.db` to forget everything.
+
+Before each question is answered, the three most relevant stored memories and the working turns
+are budgeted by the context assembler (60% turns, 40% memories) and used to rewrite the question
+so it stands alone. A rewrite that drops what the user actually typed is discarded.
+
+Is an expected page in the top five for the last turn, searched as typed versus rewritten with
+memory? 30 cases:
+
+| kind | cases | found as typed | found with memory |
+|---|---|---|---|
+| Follow-up that depends on the previous turn | 14 | 8 | 11 |
+| Fact stated in an earlier session | 6 | 5 | 5 |
+| Control: complete question after an unrelated turn | 10 | 10 | 10 |
+
+- **Working memory is where the gain is.** "How do I make it ignore case?" becomes "How do I make
+  the search ignore case when using a regular expression?".
+- **Cross-session memory works mechanically but shows no gain here.** Memories were stored,
+  survived a restart and were recalled, but five of the six questions were already findable as
+  typed, so this set cannot show a benefit.
+- **The controls caught a real failure.** In the first run the model twice returned the previous
+  question instead of the new one. The discard rule above fixed that (8 to 10 of 10).
+- **Limits of the 3B model**: it files almost everything as an episode and extracts few facts, it
+  rates everything importance 3, and it left three follow-ups unresolved.
+- **Similarity alone cannot pick memories.** With bge-small, matching question/memory pairs score
+  0.50 to 0.72 and unrelated pairs up to 0.65, so recall is top-3 with a low floor.
 
 ## Limits of this eval
 

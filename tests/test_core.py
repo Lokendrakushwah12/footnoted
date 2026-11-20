@@ -71,6 +71,75 @@ def test_assemble_shares_and_redistribution():
     assert count(passages) == (5, 0)
 
 
+def _memory(path, clock):
+    """A Memory with a word-overlap embedder and a canned compressor, so no model is needed."""
+    import zlib
+
+    import numpy as np
+
+    from footnoted import memory
+
+    def embed(text):
+        vector = np.zeros(64, dtype=np.float32)
+        for word in text.lower().replace(".", "").split():
+            vector[zlib.crc32(word.encode()) % 64] += 1
+        return vector
+
+    memory.ask = lambda system, user, schema: {
+        "summary": "The user asked about temporary files.",
+        "importance": 2,
+        "facts": [{"text": "The user builds an MCP server.", "importance": 5}],
+    }
+    return memory.Memory(embed, path, now=lambda: clock[0])
+
+
+def test_memory_tiers_persistence_and_ttl():
+    import tempfile
+    from pathlib import Path
+
+    from footnoted.memory import DAY, WORKING_TURNS
+
+    with tempfile.TemporaryDirectory() as folder:
+        path, clock = Path(folder) / "memory.db", [1_000_000.0]
+        first = _memory(path, clock)
+        for n in range(WORKING_TURNS + 2):
+            first.add_turn(f"question {n}", "answer")
+        # Working memory stays bounded; what fell out became one episode and one fact. The fact
+        # was extracted twice (two overflows) but stored once.
+        assert [q for q, _ in first.turns] == [f"question {n}" for n in range(2, WORKING_TURNS + 2)]
+        kinds = lambda m: sorted(r["kind"] for r in m.db.execute("select kind from memories"))
+        assert kinds(first) == ["episode", "fact"]
+
+        # A new session has no working memory but recalls the fact.
+        second = _memory(path, clock)
+        assert second.turns == []
+        assert second.recall("which transport for an MCP server")[0][1]["text"] == "The user builds an MCP server."
+
+        # Importance stretches the TTL: the episode (importance 2) lasts 14 days, the fact
+        # (importance 5) lasts 150.
+        clock[0] += 15 * DAY
+        assert kinds(_memory(path, clock)) == ["fact"]
+        clock[0] += 150 * DAY
+        assert kinds(_memory(path, clock)) == []
+
+
+def test_rewrite_that_drops_the_question_is_rejected():
+    import tempfile
+    from pathlib import Path
+
+    from footnoted import memory
+
+    with tempfile.TemporaryDirectory() as folder:
+        m = _memory(Path(folder) / "memory.db", [0.0])
+        m.add_turn("How do I read an INI configuration file?", "answer")
+        typed = "How do I keep a priority queue in a plain list?"
+        memory.ask = lambda *_: {"question": "How do I read an INI configuration file?"}
+        assert memory.standalone(typed, m) == typed  # drifted to the earlier question: rejected
+        faithful = "How do I keep a priority queue in a plain Python list?"
+        memory.ask = lambda *_: {"question": faithful}
+        assert memory.standalone(typed, m) == faithful  # adds context, keeps the question: accepted
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):

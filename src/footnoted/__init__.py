@@ -29,6 +29,13 @@ def main() -> None:
     answers.add_argument("files", nargs="+", type=Path)
     answers.add_argument("--limit", type=int, help="only the first N questions of each file")
 
+    chat = sub.add_parser("chat", help="ask follow-up questions; remembers across sessions")
+    chat.add_argument("--corpus", choices=["python", "mcp", "claude"])
+
+    remember = sub.add_parser("eval-memory", help="score follow-up rewriting with memory (needs the local model)")
+    remember.add_argument("file", type=Path)
+    remember.add_argument("-v", "--verbose", action="store_true", help="show every rewritten question")
+
     args = parser.parse_args()
     # Imported here so --help does not load the models.
     from . import evals as ev
@@ -48,6 +55,26 @@ def main() -> None:
         print(result.render())
         if len(result.queries) > 1:
             print(f"\n(rewrote the query: {result.queries[1:]})")
+    elif args.cmd == "chat":
+        from .answer import answer
+        from .memory import Memory, standalone
+
+        memory = Memory(lambda text: next(iter(index.embedder.embed([text]))))
+        print("Ask a question. Empty line or Ctrl-D to quit.")
+        try:
+            while typed := input("> ").strip():
+                question = standalone(typed, memory)
+                if question != typed:
+                    print(f"(understood as: {question})")
+                reply = answer(index, question, args.corpus).render()
+                print(reply, end="\n\n")
+                memory.add_turn(typed, reply[:400])
+        except (EOFError, KeyboardInterrupt):
+            pass
+        finally:
+            memory.flush()  # what was said this session becomes long-term memory
+    elif args.cmd == "eval-memory":
+        print(ev.run_memory(args.file, index, args.verbose))
     elif args.cmd == "eval-ask":
         print(ev.run_answers(args.files, index, args.limit))
     else:

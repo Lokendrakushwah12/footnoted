@@ -1,0 +1,30 @@
+{"kind": "followup", "corpus": "python", "turns": ["How do I create a temporary directory that is deleted automatically?", "And what if I only need a single file instead?"], "docs": ["library/tempfile.txt"]}
+{"kind": "followup", "corpus": "python", "turns": ["How do I run an external command and capture its output?", "How do I make it give up after ten seconds?"], "docs": ["library/subprocess.txt"]}
+{"kind": "followup", "corpus": "python", "turns": ["How do I parse command line flags?", "How do I make one of them accept several values?"], "docs": ["library/argparse.txt", "howto/argparse.txt"]}
+{"kind": "followup", "corpus": "python", "turns": ["How do I serialize an object to bytes with pickle?", "Is it safe to load data like that from an untrusted source?"], "docs": ["library/pickle.txt"]}
+{"kind": "followup", "corpus": "python", "turns": ["How do I define a dataclass?", "How do I make its instances immutable?"], "docs": ["library/dataclasses.txt"]}
+{"kind": "followup", "corpus": "python", "turns": ["How do I run several coroutines concurrently with asyncio?", "What happens if one of them raises an exception?"], "docs": ["library/asyncio-task.txt"]}
+{"kind": "followup", "corpus": "python", "turns": ["How do I write rows to a CSV file?", "How do I change the delimiter it uses?"], "docs": ["library/csv.txt"]}
+{"kind": "followup", "corpus": "python", "turns": ["How do I find all matches of a regular expression?", "How do I make it ignore case?"], "docs": ["library/re.txt", "howto/regex.txt"]}
+{"kind": "followup", "corpus": "python", "turns": ["How do I read an INI configuration file?", "How do I get one of the values as an integer?"], "docs": ["library/configparser.txt"]}
+{"kind": "followup", "corpus": "python", "turns": ["How do I use SQLite from Python?", "How do I pass values to it without risking injection?"], "docs": ["library/sqlite3.txt"]}
+{"kind": "followup", "corpus": "mcp", "turns": ["How does a server expose tools to the client?", "How does the client find out when that list changes?"], "docs": ["specification/2026-07-28/server/tools", "specification/2026-07-28/basic/patterns/subscriptions"]}
+{"kind": "followup", "corpus": "mcp", "turns": ["How does a server report progress on a long-running request?", "Can the client cancel it?"], "docs": ["specification/2026-07-28/basic/patterns/cancellation", "specification/2026-07-28/basic/patterns/progress"]}
+{"kind": "followup", "corpus": "claude", "turns": ["How does prompt caching work?", "How long does it stay valid?"], "docs": ["build-with-claude/prompt-caching"]}
+{"kind": "followup", "corpus": "claude", "turns": ["How do I use the batch API?", "How long do I have to wait for the results?"], "docs": ["build-with-claude/batch-processing"]}
+{"kind": "session", "corpus": "mcp", "turns": ["I'm building an MCP server that the client launches as a local subprocess.", "Which transport should I use for my server?"], "docs": ["specification/2026-07-28/basic/transports/stdio", "specification/2026-07-28/basic/transports/index"]}
+{"kind": "session", "corpus": "python", "turns": ["My project reads all of its settings from INI files.", "How do I read a boolean value from my settings file?"], "docs": ["library/configparser.txt"]}
+{"kind": "session", "corpus": "python", "turns": ["I store all my application data in SQLite.", "How do I back up my database while the app is running?"], "docs": ["library/sqlite3.txt"]}
+{"kind": "session", "corpus": "claude", "turns": ["I send the same 20-page system prompt to Claude with every request.", "How can I reduce what I pay for my requests?"], "docs": ["build-with-claude/prompt-caching"]}
+{"kind": "session", "corpus": "python", "turns": ["All of my scripts take their options through argparse.", "How do I add a subcommand to my script?"], "docs": ["library/argparse.txt"]}
+{"kind": "session", "corpus": "python", "turns": ["My service does all of its concurrency with asyncio.", "How do I limit how many of my tasks run at the same time?"], "docs": ["library/asyncio-sync.txt", "library/asyncio-task.txt", "library/asyncio-queue.txt"]}
+{"kind": "control", "corpus": "python", "turns": ["How does a server send log messages to the client?", "How do I create a temporary directory that is deleted automatically when I'm done with it?"], "docs": ["library/tempfile.txt"]}
+{"kind": "control", "corpus": "python", "turns": ["How does a server send log messages to the client?", "What is the recommended way to run an external command and capture what it prints?"], "docs": ["library/subprocess.txt"]}
+{"kind": "control", "corpus": "python", "turns": ["How does prompt caching work?", "Which container gives fast appends and pops from both ends?"], "docs": ["library/collections.txt"]}
+{"kind": "control", "corpus": "python", "turns": ["How does prompt caching work?", "How do I compute a SHA-256 digest of some bytes?"], "docs": ["library/hashlib.txt"]}
+{"kind": "control", "corpus": "python", "turns": ["How do I read an INI configuration file?", "How do I write rows to a comma-separated file with correct quoting?"], "docs": ["library/csv.txt"]}
+{"kind": "control", "corpus": "python", "turns": ["How do I read an INI configuration file?", "How do I keep a priority queue in a plain list?"], "docs": ["library/heapq.txt"]}
+{"kind": "control", "corpus": "python", "turns": ["How do I use SQLite from Python?", "How do I calculate the average and standard deviation of a sample?"], "docs": ["library/statistics.txt"]}
+{"kind": "control", "corpus": "python", "turns": ["How do I use SQLite from Python?", "How do I register a function to run when the interpreter shuts down?"], "docs": ["library/atexit.txt"]}
+{"kind": "control", "corpus": "mcp", "turns": ["How do I define a dataclass?", "How does a server suggest values while the user is typing an argument?"], "docs": ["specification/2026-07-28/server/utilities/completion"]}
+{"kind": "control", "corpus": "claude", "turns": ["How do I define a dataclass?", "How do I find out how many tokens a message will use before sending it?"], "docs": ["build-with-claude/token-counting"]}
