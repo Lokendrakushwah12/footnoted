@@ -4,9 +4,10 @@ from dataclasses import dataclass
 from typing import Any, Callable
 
 # Calibrated on 108 passages against the Qwen 2.5 tokenizer: median 4.25 characters per token,
-# 5th percentile 3.25, worst 2.80. 3.5 overestimates the token count of almost every passage,
-# and of every multi-passage prompt. Pass a real tokenizer as `count` for exact budgets.
-CHARS_PER_TOKEN = 3.5
+# 5th percentile 3.25, worst 2.80. The 5th percentile is used because 3.5 proved too optimistic:
+# one code-heavy prompt came out 83 tokens over its budget. Pass a real tokenizer as `count`
+# for exact budgets.
+CHARS_PER_TOKEN = 3.25
 
 # How the budget left after required items is split when every slot has more than fits.
 SHARES = {"retrieval": 0.6, "memory": 0.25, "tools": 0.15}

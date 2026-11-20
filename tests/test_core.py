@@ -37,18 +37,19 @@ def test_grounded_accepts_real_quotes_only():
 
 
 def test_assemble_never_overflows_and_keeps_required():
-    from footnoted.context import Item, assemble, estimate
+    from footnoted.context import Item, assemble
 
-    system = Item("system", "s" * 350, required=True)  # 101 tokens
-    passages = [Item("retrieval", "p" * 700, priority=1 / n) for n in range(1, 11)]  # 201 tokens each
+    # count=len makes one character one token, so the numbers below are exact.
+    system = Item("system", "s" * 100, required=True)
+    passages = [Item("retrieval", "p" * 200, priority=1 / n) for n in range(1, 11)]
     for budget in (150, 400, 1000, 5000):
-        got = assemble([system, *passages], budget)
+        got = assemble([system, *passages], budget, count=len)
         assert system in got.kept and got.tokens <= budget
-        assert got.tokens == sum(estimate(i.text) for i in got.kept)
+        assert got.tokens == sum(len(i.text) for i in got.kept)
         # Best passages first, none skipped.
         assert got.of("retrieval") == passages[: len(got.of("retrieval"))]
     try:
-        assemble([system], budget=50)
+        assemble([system], budget=50, count=len)
         raise AssertionError("expected an error when required items cannot fit")
     except ValueError:
         pass
@@ -57,15 +58,17 @@ def test_assemble_never_overflows_and_keeps_required():
 def test_assemble_shares_and_redistribution():
     from footnoted.context import Item, assemble
 
-    passages = [Item("retrieval", "p" * 700, priority=0.9) for _ in range(10)]  # 201 tokens each
-    memories = [Item("memory", "m" * 350, priority=0.1) for _ in range(10)]  # 101 tokens each
-    count = lambda got: (len(got.of("retrieval")), len(got.of("memory")))
-    # Shares first: retrieval's 600 tokens buy 2 passages, memory's 250 buy 2 memories, even
-    # though every memory has a lower priority than every passage. The 396 tokens left over
-    # (including the unused tools share) then go by priority: 1 more passage, then 1 more memory.
-    assert count(assemble([*passages, *memories], budget=1000)) == (3, 3)
+    passages = [Item("retrieval", "p" * 200, priority=0.9) for _ in range(10)]
+    memories = [Item("memory", "m" * 100, priority=0.1) for _ in range(10)]
+    count = lambda items: (lambda got: (len(got.of("retrieval")), len(got.of("memory"))))(
+        assemble(items, budget=1000, count=len)
+    )
+    # Shares first: retrieval's 600 tokens buy 3 passages and memory's 250 buy 2 memories, even
+    # though every memory has a lower priority than every passage. The 200 left over (including
+    # the unused tools share) go by priority, which buys a fourth passage.
+    assert count([*passages, *memories]) == (4, 2)
     # With no memories, retrieval takes the space memory would have had.
-    assert count(assemble(passages, budget=1000)) == (4, 0)
+    assert count(passages) == (5, 0)
 
 
 if __name__ == "__main__":

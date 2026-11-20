@@ -14,7 +14,10 @@ MAX_STEPS = 3  # one retrieval with the question, then up to two with rewritten 
 # prompt included, is silently cut off. So the budget is enforced here.
 CONTEXT_WINDOW = int(os.environ.get("FOOTNOTED_CONTEXT", "4096"))
 PROMPT_BUDGET = CONTEXT_WINDOW - MAX_TOKENS - 100  # leave room for the reply and the chat template
-CANDIDATES = 12  # passages retrieved per step; the assembler keeps as many as fit
+# Measured on the 84-question eval with the 3B model: offering 12 passages and letting the
+# budget decide was worse than 5 (28 vs 32 answers citing an expected page, 16 s vs 7 s).
+# More context is not better for a small model, so the budget is a ceiling, not a target.
+MAX_PASSAGES = 5
 MIN_QUOTE = 15  # characters; stops a one-word "quote" from counting as evidence
 
 ANSWER_SCHEMA = {
@@ -123,7 +126,7 @@ def answer(index: Index, question: str, corpus: str | None = None) -> Answer:
     queries, dropped = [question], 0
     for step in range(MAX_STEPS):
         head = f"Question: {question}\n\nPassages:"
-        found = index.search(queries[-1], corpus, k=CANDIDATES)
+        found = index.search(queries[-1], corpus, k=MAX_PASSAGES)
         context = assemble(
             [Item("system", ANSWER_PROMPT, required=True), Item("question", head, required=True)]
             + [Item("retrieval", _passage(h), priority=1 / rank, ref=h) for rank, h in enumerate(found, 1)],

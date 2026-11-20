@@ -87,7 +87,7 @@ Results with the local 3B model, 84 questions:
 | Unanswerable, declined (correct) | 11 of 12 |
 | Unanswerable, answered anyway | 1 of 12 |
 
-Median 7 seconds per question; 51 questions needed at least one rewritten query.
+Median 6 seconds per question; 51 questions needed at least one rewritten query.
 
 - **Declining works; answering is limited by the model.** Retrieval puts an expected page in the
   top five for roughly 80% of questions, but the 3B model turns that into a grounded answer for 44%.
@@ -95,6 +95,37 @@ Median 7 seconds per question; 51 questions needed at least one rewritten query.
   model copies the words but rewrites quote marks and markup.
 - **The 22 answers citing other pages are not judged.** Some are right answers from a page the eval
   does not list; some are wrong. Telling them apart needs a judge, which is not built yet.
+
+## Context budget
+
+`context.py` decides what goes into each prompt. Required items (the instructions, the question)
+always go in. Optional items carry a slot (retrieval, memory, tools) and a priority; each slot
+spends up to its share of the remaining budget, and whatever a slot leaves unused goes to the
+best remaining items of any slot. The prompt is built from what was kept, so it cannot exceed
+the model's window.
+
+This matters with Ollama in particular: a prompt longer than the window is not an error there.
+The start of it, system prompt included, is silently cut off.
+
+Tokens are estimated at 3.25 characters each, the 5th percentile measured on 108 passages with
+the Qwen tokenizer (median 4.25). The eval prints the largest real prompt as the check.
+
+Same 84 questions, two policies:
+
+| | at most 5 passages | as many as fit (up to 12) |
+|---|---|---|
+| Answerable, answered citing an expected page | 32 of 72 | 28 of 72 |
+| Answerable, declined | 18 of 72 | 22 of 72 |
+| Unanswerable, declined | 11 of 12 | 12 of 12 |
+| Median seconds per question | 5.7 | 16.1 |
+| Largest real prompt (4,096-token window) | 1,886 tokens | 3,479 tokens |
+
+- **Filling the window made answers worse and nearly three times slower.** For a 3B model the
+  budget is a ceiling, not a target, so the default is five passages.
+- **The first estimate was too optimistic.** At 3.5 characters per token one code-heavy prompt
+  came out 83 tokens over its budget; only the safety margin kept it inside the window. The
+  estimate now uses the 5th percentile.
+- Memory and tool slots are implemented and tested but have nothing to hold yet.
 
 ## Limits of this eval
 
