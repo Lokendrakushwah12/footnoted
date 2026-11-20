@@ -5,17 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>footnoted</title>
 <meta name="description" content="Question answering over documentation where every claim quotes its page and a draft is proofread before you see it. How it works, what was measured, and what it costs.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&display=swap">
+<link rel="preload" href="fonts/GeistSerif-Regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/AlloVariableFriendly.woff2" as="font" type="font/woff2" crossorigin>
 <style>
-/* Concept: a proofread sheet. One column of set type, a margin for the proofreader. Black ink
-   for what the system says; red only for the proofreader's hand: reference numerals, strikes
-   and marks; yellow only for a quote found in its source. */
+/* Self-hosted, all under the SIL Open Font License (texts in fonts/). Geist Serif is a display
+   face with one weight and no italic, so it is used large and never bold or slanted. */
+@font-face { font-family: "Geist Serif"; src: url("fonts/GeistSerif-Regular.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Allo"; src: url("fonts/AlloVariableFriendly.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap; }
+@font-face { font-family: "Allo"; src: url("fonts/Allo-Oblique.woff2") format("woff2"); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: "Geist Mono"; src: url("fonts/GeistMono-Variable.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap; }
+/* Concept: a proofread sheet. One column of text, a margin for the proofreader. What the
+   system itself said is set in the serif; everything about it is in the sans. Red is only the
+   proofreader's hand: reference numerals, strikes and marks. Yellow is only a quote found in
+   its source. */
 :root {
   --paper: #ffffff; --ink: #171614; --pencil: #5d5a54; --rule: #d9d6cf; --rubric: #b3261b; --mark: #fff0a3;
-  --serif: "Newsreader", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
-  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --display: "Geist Serif", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --sans: "Allo", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
 }
 @media (prefers-color-scheme: dark) {
@@ -23,13 +30,13 @@
 }
 * { box-sizing: border-box; }
 html { scroll-padding-block-start: 1.5rem; }
-body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--serif); font-size: 1.1875rem; line-height: 1.55; }
+body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); font-size: 1.0625rem; line-height: 1.55; }
 .sheet { max-inline-size: 66rem; margin-inline: auto; padding-inline: max(1.25rem, env(safe-area-inset-left, 0px)) max(1.25rem, env(safe-area-inset-right, 0px)); padding-block: 1.25rem 6rem; }
 
 /* Text on the left, the margin on the right. On a narrow sheet the margin note drops under its text. */
-.row { display: grid; grid-template-columns: minmax(0, 38rem) minmax(0, 15rem); column-gap: 4rem; align-items: start; }
+.row { display: grid; grid-template-columns: minmax(0, 36rem) minmax(0, 16rem); column-gap: 4rem; align-items: start; }
 .row + .row { margin-block-start: 1.5rem; }
-.row > aside { font-size: 0.9375rem; line-height: 1.45; color: var(--pencil); display: grid; gap: 0.75rem; }
+.row > aside { font-size: 0.875rem; line-height: 1.5; color: var(--pencil); display: grid; gap: 0.75rem; }
 @media (max-width: 58rem) {
   .row { grid-template-columns: minmax(0, 1fr); }
   .row > aside { margin-block-start: 0.875rem; padding-inline-start: 1rem; border-inline-start: 1px solid var(--rule); }
@@ -39,17 +46,17 @@ p { margin: 0; text-wrap: pretty; }
 p + p { margin-block-start: 0.875rem; }
 a { color: inherit; text-decoration-color: var(--rubric); text-decoration-thickness: from-font; text-underline-position: from-font; transition: text-decoration-color 150ms ease-out; }
 a:focus-visible { outline: 2px solid var(--rubric); outline-offset: 2px; border-radius: 1px; }
-code, kbd { font-family: var(--mono); font-size: 0.8125em; }
-h1, h2 { font-weight: 500; margin: 0; text-wrap: balance; }
-h1 { font-size: clamp(2.75rem, 7.5vw, 4.75rem); line-height: 1.04; letter-spacing: -0.022em; max-inline-size: 15ch; }
-h2 { font-size: 2.125rem; line-height: 1.15; letter-spacing: -0.015em; margin-block-end: 1.5rem; max-inline-size: 22ch; }
+code, kbd { font-family: var(--mono); font-size: 0.875em; }
+h1, h2 { font-family: var(--display); font-weight: 400; margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(2.75rem, 7.8vw, 5rem); line-height: 1.04; letter-spacing: -0.01em; max-inline-size: 15ch; }
+h2 { font-size: 2.375rem; line-height: 1.12; margin-block-end: 1.5rem; max-inline-size: 22ch; }
 
 .head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.25rem 1.5rem; padding-block-end: 0.75rem; border-block-end: 1px solid var(--ink); font-size: 1rem; }
-.head strong { font-weight: 600; letter-spacing: 0.01em; }
+.head strong { font-family: var(--display); font-weight: 400; font-size: 1.375rem; }
 .head nav { display: flex; flex-wrap: wrap; gap: 0.25rem 1.5rem; }
 .head a { padding-block: 0.5rem; }
 .title { margin-block-start: 4.5rem; }
-.title p { margin-block-start: 1.5rem; font-size: 1.375rem; line-height: 1.4; max-inline-size: 34rem; }
+.title p { margin-block-start: 1.5rem; font-size: 1.3125rem; line-height: 1.45; max-inline-size: 34rem; }
 
 /* The proofreader's hand */
 sup.ref, .n { font-family: var(--mono); font-size: 0.6875rem; font-weight: 500; color: var(--rubric); }
@@ -66,27 +73,27 @@ del { text-decoration: line-through; text-decoration-color: var(--rubric); text-
 /* A specimen: a real question and what came back */
 .specimen { margin-block-start: 3.5rem; padding-block-start: 1.5rem; border-block-start: 1px solid var(--rule); }
 .asked { font-style: italic; color: var(--pencil); }
-.answer { font-size: 1.5rem; line-height: 1.35; margin-block-start: 0.5rem; }
-.draft { list-style: none; margin: 0.75rem 0 0; padding: 0; display: grid; gap: 0.625rem; font-size: 1.25rem; line-height: 1.4; }
+.answer { font-family: var(--display); font-size: 1.875rem; line-height: 1.25; margin-block-start: 0.625rem; }
+.draft { list-style: none; margin: 0.75rem 0 0; padding: 0; display: grid; gap: 0.75rem; font-family: var(--display); font-size: 1.5rem; line-height: 1.3; }
 .verdict { margin-block-start: 1.25rem; }
-.passage { font-size: 1rem; line-height: 1.5; color: var(--ink); }
+.passage { font-size: 0.9375rem; line-height: 1.5; color: var(--ink); }
 
 ol.steps { margin: 0; padding: 0; list-style: none; counter-reset: step; columns: 2; column-gap: 2.5rem; }
-ol.steps li { counter-increment: step; break-inside: avoid; padding-block-end: 1rem; padding-inline-start: 1.75rem; position: relative; font-size: 1.0625rem; line-height: 1.45; }
+ol.steps li { counter-increment: step; break-inside: avoid; padding-block-end: 1rem; padding-inline-start: 1.75rem; position: relative; font-size: 1rem; line-height: 1.5; }
 ol.steps li::before { content: counter(step); position: absolute; inset-inline-start: 0; font-family: var(--mono); font-size: 0.75rem; font-weight: 500; color: var(--rubric); inset-block-start: 0.35em; }
 ol.steps b { font-weight: 600; }
 @media (max-width: 36rem) { ol.steps { columns: 1; } }
 
 /* Tables set the way a book sets them: rules above and below, none between columns */
 .scroll { overflow-x: auto; }
-table { border-collapse: collapse; inline-size: 100%; font-size: 1.0625rem; line-height: 1.35; border-block: 1.5px solid var(--ink); }
+table { border-collapse: collapse; inline-size: 100%; font-size: 1rem; line-height: 1.4; border-block: 1.5px solid var(--ink); }
 .scroll + .scroll { margin-block-start: 2rem; }
-caption { caption-side: top; text-align: start; font-style: italic; color: var(--pencil); padding-block-end: 0.5rem; font-size: 1rem; }
+caption { caption-side: top; text-align: start; font-style: italic; color: var(--pencil); padding-block-end: 0.5rem; font-size: 0.9375rem; }
 th, td { text-align: start; vertical-align: baseline; padding: 0.5rem 1.25rem 0.5rem 0; font-weight: 400; }
 th:last-child, td:last-child { padding-inline-end: 0; }
-thead th { font-style: italic; color: var(--pencil); border-block-end: 1px solid var(--ink); font-size: 1rem; white-space: nowrap; }
+thead th { font-style: italic; color: var(--pencil); border-block-end: 1px solid var(--ink); font-size: 0.9375rem; white-space: nowrap; }
 tbody tr + tr > * { border-block-start: 1px solid var(--rule); }
-.num { text-align: end; font-variant-numeric: tabular-nums lining-nums; white-space: nowrap; }
+.num { text-align: end; font-variant-numeric: tabular-nums; white-space: nowrap; }
 td.top { font-weight: 600; }
 .bar { display: block; block-size: 0.5rem; background: var(--ink); min-inline-size: 2px; }
 td.barcell { inline-size: 40%; vertical-align: middle; }
@@ -275,7 +282,7 @@ ul.plain { margin: 0; padding-inline-start: 1.125rem; display: grid; gap: 0.5rem
   </div>
 </section>
 
-<p class="colophon">Set in Newsreader and JetBrains Mono. Every number here comes from a file in <a href="https://github.com/Lokendrakushwah12/footnoted">the repository</a>; the <a href="https://github.com/Lokendrakushwah12/thirdshift/blob/master/docs/teardown.md">teardown</a> covers this project and thirdshift together.</p>
+<p class="colophon">Set in Geist Serif, Allo and Geist Mono. Every number here comes from a file in <a href="https://github.com/Lokendrakushwah12/footnoted">the repository</a>; the <a href="https://github.com/Lokendrakushwah12/thirdshift/blob/master/docs/teardown.md">teardown</a> covers this project and thirdshift together.</p>
 
 </div>
 <script>
