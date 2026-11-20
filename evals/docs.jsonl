@@ -1,0 +1,26 @@
+{"q": "How does a client tell the server to stop working on a request it no longer needs?", "corpus": "mcp", "docs": ["specification/2026-07-28/basic/patterns/cancellation"]}
+{"q": "How does a server report how far along a long-running operation is?", "corpus": "mcp", "docs": ["specification/2026-07-28/basic/patterns/progress"]}
+{"q": "How should a server that is launched as a subprocess exchange messages with the client?", "corpus": "mcp", "docs": ["specification/2026-07-28/basic/transports/stdio", "specification/2026-07-28/basic/transports/index"]}
+{"q": "How does a server ask the user for extra input in the middle of handling a request?", "corpus": "mcp", "docs": ["specification/2026-07-28/client/elicitation", "seps/1036-url-mode-elicitation-for-secure-out-of-band-intera", "seps/1330-elicitation-enum-schema-improvements-and-standards"]}
+{"q": "How can a server get a language model completion through the client?", "corpus": "mcp", "docs": ["specification/2026-07-28/client/sampling", "seps/1577--sampling-with-tools", "docs/2026-07-28/learn/client-concepts"]}
+{"q": "How does the client tell a server which directories it may work in?", "corpus": "mcp", "docs": ["specification/2026-07-28/client/roots", "docs/2026-07-28/learn/client-concepts"]}
+{"q": "How are large result lists split across several responses?", "corpus": "mcp", "docs": ["specification/2026-07-28/server/utilities/pagination"]}
+{"q": "How does a server offer reusable message templates that users can pick?", "corpus": "mcp", "docs": ["specification/2026-07-28/server/prompts", "docs/2026-07-28/learn/server-concepts"]}
+{"q": "Which characters are allowed in the name of a tool?", "corpus": "mcp", "docs": ["seps/986-specify-format-for-tool-names", "specification/2026-07-28/server/tools"]}
+{"q": "How does a client find out which authorization server protects a remote server?", "corpus": "mcp", "docs": ["specification/2026-07-28/basic/authorization/authorization-server-discovery", "specification/2026-07-28/basic/authorization/index", "seps/985-align-oauth-20-protected-resource-metadata-with-rf"]}
+{"q": "How do I list my server in the official public catalog so others can find it?", "corpus": "mcp", "docs": ["registry/quickstart", "registry/about", "registry/github-actions"]}
+{"q": "Which tool lets me interactively test and debug my server?", "corpus": "mcp", "docs": ["docs/2026-07-28/tools/inspector", "docs/2026-07-28/tools/debugging", "docs/2026-07-28/tools/inspector/web", "docs/2026-07-28/tools/inspector/cli"]}
+{"q": "How does a server suggest values while the user is typing an argument?", "corpus": "mcp", "docs": ["specification/2026-07-28/server/utilities/completion"]}
+{"q": "How does a server send diagnostic messages of different severities to the client?", "corpus": "mcp", "docs": ["specification/2026-07-28/server/utilities/logging"]}
+{"q": "How do I cut costs when I send the same long system prompt on every request?", "corpus": "claude", "docs": ["build-with-claude/prompt-caching"]}
+{"q": "How do I submit a large number of requests asynchronously at a lower price?", "corpus": "claude", "docs": ["build-with-claude/batch-processing", "about-claude/pricing"]}
+{"q": "How can I guarantee the output always conforms to my JSON schema?", "corpus": "claude", "docs": ["build-with-claude/structured-outputs", "agents-and-tools/tool-use/strict-tool-use"]}
+{"q": "How do I find out how many tokens a message will use before sending it?", "corpus": "claude", "docs": ["build-with-claude/token-counting"]}
+{"q": "How can I let the model operate a desktop with the mouse and keyboard?", "corpus": "claude", "docs": ["agents-and-tools/tool-use/computer-use-tool"]}
+{"q": "How do I receive the response piece by piece while it is being generated?", "corpus": "claude", "docs": ["build-with-claude/streaming", "agents-and-tools/tool-use/fine-grained-tool-streaming"]}
+{"q": "How do I make the model point to the exact passages in my documents that back up its answer?", "corpus": "claude", "docs": ["build-with-claude/citations", "build-with-claude/search-results"]}
+{"q": "How do I give the model a PDF to read?", "corpus": "claude", "docs": ["build-with-claude/pdf-support", "build-with-claude/files"]}
+{"q": "How can I stop the model from making things up?", "corpus": "claude", "docs": ["test-and-evaluate/strengthen-guardrails/reduce-hallucinations"]}
+{"q": "How do I let the model call several tools at once in a single turn?", "corpus": "claude", "docs": ["agents-and-tools/tool-use/parallel-tool-use", "agents-and-tools/tool-use/build-a-tool-using-agent"]}
+{"q": "How do I call a remote MCP server directly from the Messages API?", "corpus": "claude", "docs": ["agents-and-tools/mcp-connector", "agents-and-tools/remote-mcp-servers"]}
+{"q": "How do I pick between the available models for my use case?", "corpus": "claude", "docs": ["about-claude/models/choosing-a-model", "about-claude/models/optimizing-for-cost-and-intelligence"]}

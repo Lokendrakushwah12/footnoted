@@ -1,0 +1,105 @@
+"""Retrieval eval: for each question, is an expected page among the top results?"""
+
+import json
+import statistics
+import time
+from pathlib import Path
+
+from .index import MODES, Index
+
+K = 10
+
+
+def run(path: Path, index: Index, across: bool = False) -> list[dict]:
+    """Score every mode on one eval file. `across` searches all corpora instead of the question's own."""
+    cases = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+    known = {r[0] for r in index.db.execute("select distinct doc from chunks")}
+    if missing := {d for c in cases for d in c["docs"]} - known:
+        raise SystemExit(f"{path}: expected pages not in the index: {sorted(missing)}")
+
+    results = []
+    for mode in MODES:
+        index.search("warm up", mode=mode)  # keep model loading out of the timings
+        ranks, times = [], []
+        for case in cases:
+            start = time.perf_counter()
+            hits = index.search(case["q"], None if across else case["corpus"], mode, K)
+            times.append((time.perf_counter() - start) * 1000)
+            # Rank of the first chunk from an expected page, or None for a miss.
+            ranks.append(next((n for n, h in enumerate(hits, 1) if h["doc"] in case["docs"]), None))
+        results.append(
+            {
+                "mode": mode,
+                "recall@1": sum(r == 1 for r in ranks) / len(cases),
+                "recall@5": sum(r is not None and r <= 5 for r in ranks) / len(cases),
+                "mrr@10": sum(1 / r for r in ranks if r) / len(cases),
+                "p50_ms": statistics.median(times),
+                "misses": [c["q"] for c, r in zip(cases, ranks) if r is None or r > 5],
+            }
+        )
+    return results
+
+
+def run_answers(paths: list[Path], index: Index, limit: int | None = None) -> str:
+    """Answer eval. A case with expected pages should be answered citing one; a case with none should be declined."""
+    from . import llm
+    from .answer import CONTEXT_WINDOW, answer
+
+    rows = []
+    for path in paths:
+        cases = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+        for case in cases[:limit]:
+            start = time.perf_counter()
+            result = answer(index, case["q"], case["corpus"])
+            rows.append(
+                {
+                    "q": case["q"],
+                    "answerable": bool(case["docs"]),
+                    "answered": bool(result.claims),
+                    "right_page": bool({c.source["doc"] for c in result.claims} & set(case["docs"])),
+                    "steps": len(result.queries),
+                    "dropped": result.dropped,
+                    "seconds": time.perf_counter() - start,
+                }
+            )
+            print(".", end="", flush=True)
+
+    yes = [r for r in rows if r["answerable"]]
+    no = [r for r in rows if not r["answerable"]]
+    out = [""]
+    if yes:
+        out += [
+            f"answerable questions: {len(yes)}",
+            f"  answered, citing an expected page: {sum(r['right_page'] for r in yes)}",
+            f"  answered, citing only other pages: {sum(r['answered'] and not r['right_page'] for r in yes)}",
+            f"  declined: {sum(not r['answered'] for r in yes)}",
+        ]
+    if no:
+        out += [
+            f"unanswerable questions: {len(no)}",
+            f"  declined (correct): {sum(not r['answered'] for r in no)}",
+            f"  answered anyway (wrong): {sum(r['answered'] for r in no)}",
+        ]
+    out += [
+        f"claims dropped (quote not found, or rejected by the check): {sum(r['dropped'] for r in rows)}",
+        f"questions needing a rewritten query: {sum(r['steps'] > 1 for r in rows)}",
+        f"median seconds per question: {statistics.median(r['seconds'] for r in rows):.1f}",
+        f"largest prompt sent: {max(llm.prompt_tokens)} tokens, leaving {CONTEXT_WINDOW - max(llm.prompt_tokens)} "
+        f"of the {CONTEXT_WINDOW}-token window for the reply (cap {llm.MAX_TOKENS})",
+        "",
+        "not ideal:",
+    ]
+    out += [f"  - {r['q']}" for r in rows if r["answered"] != r["answerable"] or (r["answerable"] and not r["right_page"])]
+    return "\n".join(out)
+
+
+def report(path: Path, results: list[dict], verbose: bool = False) -> str:
+    out = [f"{path} ", "", "| mode | recall@1 | recall@5 | MRR@10 | p50 ms |", "|---|---|---|---|---|"]
+    for r in results:
+        out.append(
+            f"| {r['mode']} | {r['recall@1']:.2f} | {r['recall@5']:.2f} | {r['mrr@10']:.2f} | {r['p50_ms']:.0f} |"
+        )
+    if verbose:
+        for r in results:
+            out += ["", f"{r['mode']} misses at 5:"] + [f"  - {q}" for q in r["misses"]]
+    return "\n".join(out)

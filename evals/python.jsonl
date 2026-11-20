@@ -1,0 +1,46 @@
+{"q": "How do I create a temporary directory that is deleted automatically when I'm done with it?", "corpus": "python", "docs": ["library/tempfile.txt"]}
+{"q": "What is the recommended way to run an external command and capture what it prints?", "corpus": "python", "docs": ["library/subprocess.txt"]}
+{"q": "How can I remember the results of an expensive function so repeated calls are fast?", "corpus": "python", "docs": ["library/functools.txt"]}
+{"q": "Which container gives fast appends and pops from both ends?", "corpus": "python", "docs": ["library/collections.txt"]}
+{"q": "How do I tally how many times each element appears in a list?", "corpus": "python", "docs": ["library/collections.txt"]}
+{"q": "How do I read a whole file as text using an object-oriented filesystem path?", "corpus": "python", "docs": ["library/pathlib.txt"]}
+{"q": "How can I pause a coroutine for a few seconds without blocking the event loop?", "corpus": "python", "docs": ["library/asyncio-task.txt"]}
+{"q": "How do I run several coroutines concurrently and collect all their results?", "corpus": "python", "docs": ["library/asyncio-task.txt"]}
+{"q": "What is the difference between duplicating an object shallowly and recursively?", "corpus": "python", "docs": ["library/copy.txt"]}
+{"q": "How do I handle flags and positional arguments passed to my script on the command line?", "corpus": "python", "docs": ["library/argparse.txt", "howto/argparse.txt"]}
+{"q": "How do I turn an arbitrary object into bytes so it can be restored later?", "corpus": "python", "docs": ["library/pickle.txt"]}
+{"q": "How do I generate an unguessable token for a password reset link?", "corpus": "python", "docs": ["library/secrets.txt"]}
+{"q": "How do I measure how long a small piece of code takes to run?", "corpus": "python", "docs": ["library/timeit.txt"]}
+{"q": "How do I define a class whose constructor and repr are generated from annotated fields?", "corpus": "python", "docs": ["library/dataclasses.txt"]}
+{"q": "How can I loop over every possible pair of items drawn from a list?", "corpus": "python", "docs": ["library/itertools.txt"]}
+{"q": "How do I write a with-statement helper as a generator function instead of a class?", "corpus": "python", "docs": ["library/contextlib.txt"]}
+{"q": "How do I compute a SHA-256 digest of some bytes?", "corpus": "python", "docs": ["library/hashlib.txt"]}
+{"q": "How do I parse an ISO 8601 timestamp string that includes a UTC offset?", "corpus": "python", "docs": ["library/datetime.txt"]}
+{"q": "How do I find every non-overlapping match of a pattern in a string?", "corpus": "python", "docs": ["library/re.txt", "howto/regex.txt"]}
+{"q": "How do I write rows to a comma-separated file with correct quoting?", "corpus": "python", "docs": ["library/csv.txt"]}
+{"q": "How do I use several CPU cores for computation despite the global interpreter lock?", "corpus": "python", "docs": ["library/multiprocessing.txt", "library/concurrent.futures.txt"]}
+{"q": "How do I hand callables to a pool of worker threads and get back objects representing pending results?", "corpus": "python", "docs": ["library/concurrent.futures.txt"]}
+{"q": "How do I find out which functions my program spends the most time in?", "corpus": "python", "docs": ["library/profile.txt"]}
+{"q": "How do I step through my code one line at a time and inspect variables?", "corpus": "python", "docs": ["library/pdb.txt"]}
+{"q": "How do I write diagnostic messages to a file that rolls over when it gets too big?", "corpus": "python", "docs": ["library/logging.handlers.txt", "howto/logging-cookbook.txt", "howto/logging.txt"]}
+{"q": "How do I annotate a parameter that may be either an integer or missing?", "corpus": "python", "docs": ["library/typing.txt", "builtins/stdtypes.txt"]}
+{"q": "How do I define a fixed set of named constants?", "corpus": "python", "docs": ["library/enum.txt", "howto/enum.txt"]}
+{"q": "How do I convert integers to and from the binary layout a C program expects?", "corpus": "python", "docs": ["library/struct.txt"]}
+{"q": "How do I keep a priority queue in a plain list?", "corpus": "python", "docs": ["library/heapq.txt"]}
+{"q": "How do I insert an item into an already sorted list and keep it sorted, using binary search?", "corpus": "python", "docs": ["library/bisect.txt"]}
+{"q": "How do I download a web page using only the standard library?", "corpus": "python", "docs": ["library/urllib.request.txt", "howto/urllib2.txt"]}
+{"q": "How do I do exact arithmetic on money amounts without binary floating point rounding errors?", "corpus": "python", "docs": ["library/decimal.txt", "tutorial/floatingpoint.txt"]}
+{"q": "How do I create an isolated environment with its own set of installed packages?", "corpus": "python", "docs": ["library/venv.txt", "tutorial/venv.txt"]}
+{"q": "In a test, how do I replace an object with a fake and check how it was called?", "corpus": "python", "docs": ["library/unittest.mock.txt", "library/unittest.mock-examples.txt"]}
+{"q": "How do I store data in an embedded SQL database that needs no separate server?", "corpus": "python", "docs": ["library/sqlite3.txt"]}
+{"q": "How do I read settings from an INI-style file?", "corpus": "python", "docs": ["library/configparser.txt"]}
+{"q": "How do I compress a file so that gunzip can read it?", "corpus": "python", "docs": ["library/gzip.txt", "library/zlib.txt"]}
+{"q": "How do I register a function to run when the interpreter shuts down?", "corpus": "python", "docs": ["library/atexit.txt"]}
+{"q": "How do I refer to an object without keeping it alive?", "corpus": "python", "docs": ["library/weakref.txt"]}
+{"q": "How do I get the source code and parameter list of a function at runtime?", "corpus": "python", "docs": ["library/inspect.txt"]}
+{"q": "How do I wait until any of many sockets is ready to read, efficiently?", "corpus": "python", "docs": ["library/selectors.txt", "library/select.txt"]}
+{"q": "How do I call a function from a compiled shared library without writing an extension module?", "corpus": "python", "docs": ["library/ctypes.txt"]}
+{"q": "How do I run my own cleanup code when the user presses Ctrl-C?", "corpus": "python", "docs": ["library/signal.txt"]}
+{"q": "How do I calculate the average and standard deviation of a sample?", "corpus": "python", "docs": ["library/statistics.txt"]}
+{"q": "How do I show the line-by-line differences between two texts?", "corpus": "python", "docs": ["library/difflib.txt"]}
+{"q": "How do I make my program's messages available in other languages?", "corpus": "python", "docs": ["library/gettext.txt"]}
