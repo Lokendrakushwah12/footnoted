@@ -3,6 +3,10 @@
 Question answering over documentation where every claim carries a quote from the page it came
 from, and questions the docs cannot answer are declined.
 
+The runtime built around this project is [thirdshift](https://github.com/Lokendrakushwah12/thirdshift).
+Its [teardown](https://github.com/Lokendrakushwah12/thirdshift/blob/master/docs/teardown.md) gives
+the verdict on every technique in both repositories, with diagrams and cost per task.
+
 ## Run it
 
 ```sh
