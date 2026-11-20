@@ -150,6 +150,36 @@ def test_gate_accepts_only_legal_trajectories():
     assert not valid("retrieve>draft>ground>verify".split(">"))  # stopped without an outcome
 
 
+def test_graph_merge_communities_and_walk():
+    from footnoted.graph import Graph, communities, merge, norm
+
+    assert norm("Tools/Call") == "tool call" and norm("progress") == "progress"
+
+    e = lambda name: {"name": name, "type": "concept", "description": f"about {name}"}
+    r = lambda s, t: {"source": s, "relation": "uses", "target": t}
+    graph = merge(
+        {
+            ("page-a", 0): {"entities": [e("Tool"), e("tools/call")], "relations": [r("tool", "tools/call"), r("tool", "ghost")]},
+            ("page-b", 0): {"entities": [e("tools"), e("MRTR")], "relations": [r("Tools/Call", "MRTR")]},
+        }
+    )
+    # "Tool" and "tools" are one entity seen on two pages; the edge to an unknown name is dropped.
+    assert graph["entities"]["tool"]["docs"] == ["page-a", "page-b"]
+    assert graph["edges"] == [("tool", "uses", "tool call"), ("tool call", "uses", "mrtr")]
+
+    # Two triangles joined by a single edge come out as two communities.
+    triangle = lambda a, b, c: [(a, "-", b), (b, "-", c), (a, "-", c)]
+    edges = triangle("a1", "a2", "a3") + triangle("b1", "b2", "b3") + [("a1", "-", "b1")]
+    assert communities(["a1", "a2", "a3", "b1", "b2", "b3"], edges) == [["a1", "a2", "a3"], ["b1", "b2", "b3"]]
+
+    # The question names "tool"; MRTR is two hops away and only on page-b, so page-b is reached
+    # through the graph even though the question never mentions MRTR.
+    g = Graph(graph)
+    scores = g.walk(g.seeds("how does a tool ask for input"))
+    assert scores["tool"] > scores["tool call"] > scores["mrtr"] > 0
+    assert set(g.pages("how does a tool ask for input")) == {"page-a", "page-b"}
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):

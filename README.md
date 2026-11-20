@@ -18,6 +18,9 @@ uv run footnoted gate record               # run the answer evals, write evals/s
 uv run footnoted gate check                # compare with evals/golden.json; this is what CI runs
 uv run footnoted chat --corpus python      # follow-up questions; remembers across sessions
 uv run footnoted eval-memory evals/memory.jsonl -v
+uv run footnoted graph build               # knowledge graph of the MCP specification, ~15 minutes
+uv run footnoted graph query "How does a server get the user's working directories?"
+uv run footnoted eval-graph evals/graph.jsonl
 ```
 
 Any OpenAI-compatible endpoint works: set `FOOTNOTED_BASE_URL`, `FOOTNOTED_MODEL` and
@@ -214,6 +217,45 @@ The golden run, step by step:
 - **CI trusts the committed scorecard.** It proves the scorecard is fresh, not that it was
   produced honestly. Replaying recorded model calls in CI, or a self-hosted runner with the
   model, would close that gap.
+
+## Knowledge graph
+
+`graph.py` turns the 29 pages of the MCP specification into a graph and uses it to find pages.
+
+1. **Extract.** The model reads the pages five chunks at a time and returns up to six entities
+   and six relations per batch. Replies are saved as they arrive, so a build can resume.
+2. **Merge.** Names are normalised (case, punctuation, simple plurals) and merged into one graph;
+   a relation is kept only if both ends were extracted as entities.
+3. **Cluster and summarise.** Label propagation groups the graph into communities, and the model
+   writes a title and summary for each.
+4. **Query.** Entities named in the question, or similar to it, are the seeds. A two-hop walk
+   scores their neighbourhood, damped at hubs, and pages are ranked by the entities they mention.
+
+The graph: 394 entities, 496 relations, 19 communities, from 102 batches of which 8 failed.
+
+Page retrieval, top five pages. A multi-hop question needs two specific pages and counts only if
+both are found; a control is an ordinary single-page question.
+
+| kind | questions | hybrid | hybrid, limited to the graph's pages | graph alone | hybrid + graph |
+|---|---|---|---|---|---|
+| multi-hop | 12 | 7 | 11 | 6 | 7 |
+| control | 14 | 7 | 10 | 9 | 11 |
+
+- **The graph adds nothing that narrowing the search does not.** Fusing it with hybrid search
+  lifts the controls from 7 to 11, which looks like a win until hybrid search is simply limited
+  to the same 29 pages: that scores 10 on the controls and 11 of 12 on multi-hop, where the graph
+  scores 7. The graph was working as a scope filter.
+- **The mechanism does work on individual questions.** For "How does a server get the user's
+  working directories while it is handling a request?" hybrid search finds neither page; the graph
+  walks from `workspace` to `roots` to `InputRequiredResult` and returns both.
+- **The extraction is the weak part.** The 3B model labels 322 of 394 entities as plain
+  "concept", leaves 119 with no relations, and makes `client` and `server` hubs with over 100
+  edges each, which pulls 134 entities into one community.
+- **Asking for too much lost data.** At eight entities and eight relations per batch, 31 of 102
+  replies were cut off mid-JSON by the output cap. At six and six, 8 still are.
+- **Community summaries are generated but not evaluated**, and in an earlier build two of them
+  invented an expansion of "MCP". Treat them as unverified.
+- The multi-hop questions were written from the pages' section headings, not from the graph.
 
 ## Limits of this eval
 

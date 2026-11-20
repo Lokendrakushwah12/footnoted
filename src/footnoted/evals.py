@@ -2,6 +2,7 @@
 
 import json
 import statistics
+from collections import Counter
 import time
 from pathlib import Path
 
@@ -76,6 +77,41 @@ def run_memory(path: Path, index: Index, verbose: bool = False) -> str:
     out = ["", "| kind | questions | found as typed | found with memory |", "|---|---|---|---|"]
     for kind, results in tally.items():
         out.append(f"| {kind} | {len(results)} | {sum(a for a, _ in results)} | {sum(b for _, b in results)} |")
+    return "\n".join(out + ([""] + notes if verbose else []))
+
+
+def run_graph(path: Path, index: Index, verbose: bool = False) -> str:
+    """Page retrieval with and without the graph, judged on the top five pages.
+
+    multihop  the answer needs two pages; both must be in the top five
+    control   an ordinary single-page question; any expected page in the top five
+    """
+    from . import graph as gr
+
+    graph = gr.load(index)
+    # The graph only knows some pages. "hybrid, graph's pages" is plain search limited to those
+    # same pages, to separate what the graph adds from what merely narrowing the scope adds.
+    scope = {r[0] for r in index.db.execute(f"select distinct doc from chunks where {gr.SCOPE}")}
+    arms = {
+        "hybrid": lambda c: gr.hybrid_pages(index, c["q"], c["corpus"]),
+        "hybrid, graph's pages": lambda c: [d for d in gr.hybrid_pages(index, c["q"], c["corpus"], 100) if d in scope],
+        "graph": lambda c: graph.pages(c["q"]),
+        "hybrid + graph": lambda c: gr.combined_pages(index, graph, c["q"], c["corpus"]),
+    }
+    cases = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+    tally: dict[str, dict[str, int]] = {}
+    notes = []
+    for case in cases:
+        need = all if case["kind"] == "multihop" else any
+        for arm, pages in arms.items():
+            top = pages(case)[:5]
+            hit = need(doc in top for doc in case["docs"])
+            tally.setdefault(case["kind"], dict.fromkeys(arms, 0))[arm] += hit
+            notes.append(f"  [{case['kind']}] {arm:22} {'ok  ' if hit else 'MISS'} {case['q'][:70]}\n      {[d.split('/')[-1] for d in top]}")
+    count = Counter(c["kind"] for c in cases)
+    out = ["| kind | questions | " + " | ".join(arms) + " |", "|---|---|" + "---|" * len(arms)]
+    for kind, hits in tally.items():
+        out.append(f"| {kind} | {count[kind]} | " + " | ".join(str(hits[a]) for a in arms) + " |")
     return "\n".join(out + ([""] + notes if verbose else []))
 
 

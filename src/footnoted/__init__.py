@@ -40,6 +40,14 @@ def main() -> None:
     remember.add_argument("file", type=Path)
     remember.add_argument("-v", "--verbose", action="store_true", help="show every rewritten question")
 
+    graph = sub.add_parser("graph", help="knowledge graph over the MCP specification")
+    graph.add_argument("action", choices=["build", "query"], help="build needs the local model")
+    graph.add_argument("question", nargs="?")
+
+    hops = sub.add_parser("eval-graph", help="score page retrieval with and without the graph")
+    hops.add_argument("file", type=Path)
+    hops.add_argument("-v", "--verbose", action="store_true", help="show the pages found for every question")
+
     args = parser.parse_args()
     if args.cmd == "gate" and args.action != "record":  # no model, no index: this is what CI runs
         import json
@@ -97,6 +105,19 @@ def main() -> None:
             pass
         finally:
             memory.flush()  # what was said this session becomes long-term memory
+    elif args.cmd == "graph":
+        from . import graph as gr
+
+        if args.action == "build":
+            data = gr.build(index)
+            print(
+                f"{len(data['entities'])} entities, {len(data['edges'])} relations, "
+                f"{len(data['communities'])} communities, {data['failed_batches']} failed batches"
+            )
+        else:
+            print(gr.explain(gr.load(index), args.question or parser.error("graph query needs a question")))
+    elif args.cmd == "eval-graph":
+        print(ev.run_graph(args.file, index, args.verbose))
     elif args.cmd == "eval-memory":
         print(ev.run_memory(args.file, index, args.verbose))
     elif args.cmd == "gate":
