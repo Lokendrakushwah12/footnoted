@@ -40,59 +40,6 @@ def run(path: Path, index: Index, across: bool = False) -> list[dict]:
     return results
 
 
-def run_answers(paths: list[Path], index: Index, limit: int | None = None) -> str:
-    """Answer eval. A case with expected pages should be answered citing one; a case with none should be declined."""
-    from . import llm
-    from .answer import CONTEXT_WINDOW, answer
-
-    rows = []
-    for path in paths:
-        cases = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
-        for case in cases[:limit]:
-            start = time.perf_counter()
-            result = answer(index, case["q"], case["corpus"])
-            rows.append(
-                {
-                    "q": case["q"],
-                    "answerable": bool(case["docs"]),
-                    "answered": bool(result.claims),
-                    "right_page": bool({c.source["doc"] for c in result.claims} & set(case["docs"])),
-                    "steps": len(result.queries),
-                    "dropped": result.dropped,
-                    "seconds": time.perf_counter() - start,
-                }
-            )
-            print(".", end="", flush=True)
-
-    yes = [r for r in rows if r["answerable"]]
-    no = [r for r in rows if not r["answerable"]]
-    out = [""]
-    if yes:
-        out += [
-            f"answerable questions: {len(yes)}",
-            f"  answered, citing an expected page: {sum(r['right_page'] for r in yes)}",
-            f"  answered, citing only other pages: {sum(r['answered'] and not r['right_page'] for r in yes)}",
-            f"  declined: {sum(not r['answered'] for r in yes)}",
-        ]
-    if no:
-        out += [
-            f"unanswerable questions: {len(no)}",
-            f"  declined (correct): {sum(not r['answered'] for r in no)}",
-            f"  answered anyway (wrong): {sum(r['answered'] for r in no)}",
-        ]
-    out += [
-        f"claims dropped (quote not found, or rejected by the check): {sum(r['dropped'] for r in rows)}",
-        f"questions needing a rewritten query: {sum(r['steps'] > 1 for r in rows)}",
-        f"median seconds per question: {statistics.median(r['seconds'] for r in rows):.1f}",
-        f"largest prompt sent: {max(llm.prompt_tokens)} tokens, leaving {CONTEXT_WINDOW - max(llm.prompt_tokens)} "
-        f"of the {CONTEXT_WINDOW}-token window for the reply (cap {llm.MAX_TOKENS})",
-        "",
-        "not ideal:",
-    ]
-    out += [f"  - {r['q']}" for r in rows if r["answered"] != r["answerable"] or (r["answerable"] and not r["right_page"])]
-    return "\n".join(out)
-
-
 def run_memory(path: Path, index: Index, verbose: bool = False) -> str:
     """Memory eval: is an expected page in the top 5 for the last turn, searched as typed versus
     rewritten with memory?

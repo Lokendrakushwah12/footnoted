@@ -1,0 +1,20 @@
+name: gate
+
+# Runs on every push and pull request. No model is needed: the evals are recorded locally
+# with `footnoted gate record`, and this job checks that the committed scorecard is fresh
+# and has not regressed against evals/golden.json.
+on:
+  push:
+  pull_request:
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync
+      - name: Unit checks
+        run: uv run python tests/test_core.py
+      - name: Trajectory eval gate
+        run: uv run footnoted gate check

@@ -86,6 +86,7 @@ class Answer:
     claims: list[Claim]  # empty means the system declined to answer
     queries: list[str]  # the question, then each rewritten query
     dropped: int  # claims discarded: quote not found in a passage, or rejected by the check
+    trace: list[dict]  # every step taken, in order: retrieve, draft, ground, verify, rewrite, answer/decline
 
     def render(self) -> str:
         if not self.claims:
@@ -123,7 +124,8 @@ def _passage(hit: sqlite3.Row) -> str:
 
 
 def answer(index: Index, question: str, corpus: str | None = None) -> Answer:
-    queries, dropped = [question], 0
+    queries, dropped, trace = [question], 0, []
+    step_done = lambda name, **detail: trace.append({"step": name, **detail})
     for step in range(MAX_STEPS):
         head = f"Question: {question}\n\nPassages:"
         found = index.search(queries[-1], corpus, k=MAX_PASSAGES)
@@ -133,10 +135,13 @@ def answer(index: Index, question: str, corpus: str | None = None) -> Answer:
             PROMPT_BUDGET,
         )
         hits = [item.ref for item in context.of("retrieval")]
+        step_done("retrieve", query=queries[-1], docs=[h["doc"] for h in hits])
         passages = "\n\n".join(f"[{n}] {_passage(h)}" for n, h in enumerate(hits, 1))
         draft = ask(ANSWER_PROMPT, f"{head}\n{passages}", ANSWER_SCHEMA)
+        drafted = draft.get("claims", []) if draft.get("answerable") else []
+        step_done("draft", claims=len(drafted))
         claims = []
-        for c in draft.get("claims", []) if draft.get("answerable") else []:
+        for c in drafted:
             # Try the passage the model cited first, then the others: a right quote with a
             # wrong number is still evidence, just misattributed.
             cited = hits[c["passage"] - 1 : c["passage"]] if c["passage"] >= 1 else []
@@ -146,11 +151,14 @@ def answer(index: Index, question: str, corpus: str | None = None) -> Answer:
                 dropped += 1
             else:
                 claims.append(Claim(c["statement"], c["quote"], source))
+        step_done("ground", kept=len(claims))
         if claims:
             kept = verify(question, claims)
             dropped += len(claims) - len(kept)
+            step_done("verify", kept=len(kept))
             if kept:
-                return Answer(question, kept, queries, dropped)
+                step_done("answer")
+                return Answer(question, kept, queries, dropped, trace)
         if step + 1 < MAX_STEPS:
             titles = "; ".join(dict.fromkeys(h["title"] for h in hits))
             prompt = f"Question: {question}\nEarlier queries: {queries}\nPages found so far: {titles}"
@@ -158,4 +166,6 @@ def answer(index: Index, question: str, corpus: str | None = None) -> Answer:
             if rewritten in queries:
                 break  # the model has no new idea; searching again would return the same passages
             queries.append(rewritten)
-    return Answer(question, [], queries, dropped)
+            step_done("rewrite", query=rewritten)
+    step_done("decline")
+    return Answer(question, [], queries, dropped, trace)

@@ -14,7 +14,8 @@ uv run python tests/test_core.py
 
 ollama pull hf.co/Qwen/Qwen2.5-3B-Instruct-GGUF:Q4_K_M   # free local model, 2.1 GB
 uv run footnoted ask "How do I compute a SHA-256 digest?" --corpus python
-uv run footnoted eval-ask evals/python.jsonl evals/docs.jsonl evals/unanswerable.jsonl
+uv run footnoted gate record               # run the answer evals, write evals/scorecard.json
+uv run footnoted gate check                # compare with evals/golden.json; this is what CI runs
 uv run footnoted chat --corpus python      # follow-up questions; remembers across sessions
 uv run footnoted eval-memory evals/memory.jsonl -v
 ```
@@ -83,8 +84,8 @@ Results with the local 3B model, 84 questions:
 
 | | count |
 |---|---|
-| Answerable, answered citing an expected page | 32 of 72 |
-| Answerable, answered citing only other pages | 22 of 72 |
+| Answerable, answered citing an expected page | 31 of 72 |
+| Answerable, answered citing only other pages | 23 of 72 |
 | Answerable, declined | 18 of 72 |
 | Unanswerable, declined (correct) | 11 of 12 |
 | Unanswerable, answered anyway | 1 of 12 |
@@ -92,11 +93,12 @@ Results with the local 3B model, 84 questions:
 Median 6 seconds per question; 51 questions needed at least one rewritten query.
 
 - **Declining works; answering is limited by the model.** Retrieval puts an expected page in the
-  top five for roughly 80% of questions, but the 3B model turns that into a grounded answer for 44%.
+  top five for roughly 80% of questions, but the 3B model turns that into a grounded answer for 43%.
 - **Matching quotes on words instead of characters** moved expected-page answers from 23 to 32. The
   model copies the words but rewrites quote marks and markup.
-- **The 22 answers citing other pages are not judged.** Some are right answers from a page the eval
-  does not list; some are wrong. Telling them apart needs a judge, which is not built yet.
+- **Answers citing other pages are only partly judged.** Some are right answers from a page the
+  eval does not list; some are wrong. The gate below adds a key-term check for the Python
+  questions, and shows that the model judge is not yet reliable enough to settle the rest.
 
 ## Context budget
 
@@ -168,6 +170,50 @@ memory? 30 cases:
   rates everything importance 3, and it left three follow-ups unresolved.
 - **Similarity alone cannot pick memories.** With bge-small, matching question/memory pairs score
   0.50 to 0.72 and unrelated pairs up to 0.65, so recall is top-3 with a low floor.
+
+## Eval gate
+
+`gate.py` grades every step of the answer loop, not just the final answer, and blocks regressions.
+
+Each run of the loop records its trajectory: `retrieve`, `draft`, `ground`, `verify`, then
+`answer`, `decline`, or `rewrite` and around again. The gate checks three things:
+
+1. **Legal path.** Every trajectory must be a path through the loop's graph of allowed moves,
+   starting at `retrieve` and ending at `answer` or `decline`. Answering without `verify` fails.
+2. **Step-level scores against a golden run.** `evals/golden.json` holds the accepted run.
+   The current run may fall at most two questions below it on "cites an expected page" and
+   "correct by key term", and one on "declines the unanswerable".
+3. **Freshness.** The scorecard stores a hash of the answer-loop sources and eval files. If
+   either changed since it was recorded, the gate fails until the evals are re-run.
+
+The model runs locally, so `gate record` is run by hand and the scorecard is committed. CI
+(`.github/workflows/gate.yml`) runs the unit checks and `gate check`, which needs no model.
+`gate accept` promotes the current scorecard to golden, as a visible change in the diff.
+
+The golden run, step by step:
+
+| step | result |
+|---|---|
+| Retrieve: an expected page reached the model | 60 of 72 |
+| Answered at all | 54 of 72 |
+| Answered citing an expected page | 31 of 72 |
+| Correct by key term (Python questions that were answered) | 29 of 34 |
+| Unanswerable questions declined | 11 of 12 |
+| Claims: drafted, quote verified, kept after the check | 171, 135, 80 |
+| Trajectories off the legal graph | 0 |
+
+- **Is the band right?** Re-recording the same code moved "cites an expected page" by one
+  question and passed. Cutting retrieval to one passage moved it by 12 and "correct" by 14, and
+  the gate failed, listing each question that got worse.
+- **Correctness is a proxy.** A Python answer counts as correct when it names an API a right
+  answer must name (`TemporaryDirectory`, `sha256`). It cannot tell a right use from a wrong one.
+- **The model judge is calibrated, and fails calibration.** Asked whether each answer is correct,
+  the 3B model agreed with the key-term check on 26 of 34 answers and rejected 7 that named the
+  right API. It is reported but never gated on. It accepts 8 of the 20 answers that have no key
+  terms, which at that agreement rate says little.
+- **CI trusts the committed scorecard.** It proves the scorecard is fresh, not that it was
+  produced honestly. Replaying recorded model calls in CI, or a self-hosted runner with the
+  model, would close that gap.
 
 ## Limits of this eval
 

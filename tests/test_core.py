@@ -140,6 +140,16 @@ def test_rewrite_that_drops_the_question_is_rejected():
         assert memory.standalone(typed, m) == faithful  # adds context, keeps the question: accepted
 
 
+def test_gate_accepts_only_legal_trajectories():
+    from footnoted.gate import valid
+
+    assert valid("retrieve>draft>ground>verify>answer".split(">"))
+    assert valid("retrieve>draft>ground>rewrite>retrieve>draft>ground>decline".split(">"))
+    assert not valid("retrieve>draft>ground>answer".split(">"))  # answered without the check
+    assert not valid("draft>ground>verify>answer".split(">"))  # never retrieved
+    assert not valid("retrieve>draft>ground>verify".split(">"))  # stopped without an outcome
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):
