@@ -4,125 +4,105 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>footnoted</title>
-<meta name="description" content="Question answering over documentation where every claim quotes its page, and questions the docs cannot answer are declined. Architecture, measurements, cost and time.">
+<meta name="description" content="Question answering over documentation where every claim quotes its page and a draft is proofread before you see it. How it works, what was measured, and what it costs.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&display=swap">
 <style>
-/* Theme: a page that practises what the project does. Every figure carries a footnote to the
-   eval file and command that produced it. Serif display over a sans body, ink-blue accent. */
+/* Concept: a proofread sheet. One column of set type, a margin for the proofreader. Black ink
+   for what the system says; red only for the proofreader's hand: reference numerals, strikes
+   and marks; yellow only for a quote found in its source. */
 :root {
-  /* primitives, named by hue */
-  --neutral-0: #ffffff; --neutral-50: #f6f7fa; --neutral-200: #d9dee6; --neutral-600: #566072; --neutral-900: #191e2b;
-  --blue-700: #2343b8; --blue-100: #e5eafc;
-  --green-700: #0b6e4f; --green-100: #dcf3e9; --red-700: #ab2a1e; --red-100: #fbe3df; --amber-800: #7d5200; --amber-100: #faecc8;
-  /* semantics, named by role: the only tier the rules below use */
-  --color-bg: var(--neutral-50); --color-surface: var(--neutral-0); --color-text: var(--neutral-900);
-  --color-text-secondary: var(--neutral-600); --color-border: var(--neutral-200);
-  --color-accent: var(--blue-700); --color-accent-subtle: var(--blue-100);
-  --color-pass: var(--green-700); --color-pass-subtle: var(--green-100);
-  --color-fail: var(--red-700); --color-fail-subtle: var(--red-100);
-  --color-warn: var(--amber-800); --color-warn-subtle: var(--amber-100);
-  --font-display: "Newsreader", "Iowan Old Style", Georgia, serif;
-  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-data: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --measure: 68ch;
+  --paper: #ffffff; --ink: #171614; --pencil: #5d5a54; --rule: #d9d6cf; --rubric: #b3261b; --mark: #fff0a3;
+  --serif: "Newsreader", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
 }
 @media (prefers-color-scheme: dark) {
-  :root {
-    --neutral-0: #171c26; --neutral-50: #0f131a; --neutral-200: #2a3140; --neutral-600: #9aa5b6; --neutral-900: #e6e9ef;
-    --blue-700: #a3b8ff; --blue-100: #1c2748;
-    --green-700: #62d6ab; --green-100: #10352a; --red-700: #ff968c; --red-100: #3e1a16; --amber-800: #f0bf5f; --amber-100: #392b0b;
-    color-scheme: dark;
-  }
+  :root { --paper: #151412; --ink: #eceae5; --pencil: #aaa69d; --rule: #37342f; --rubric: #ff8b79; --mark: #4b4011; color-scheme: dark; }
 }
-
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--color-bg); color: var(--color-text); font-family: var(--font-body); font-size: 1rem; line-height: 1.6; }
-.page { max-inline-size: 62rem; margin-inline: auto; padding-inline: max(1.25rem, env(safe-area-inset-left, 0px)) max(1.25rem, env(safe-area-inset-right, 0px)); padding-block: 1.5rem 5rem; display: flex; flex-direction: column; gap: 5rem; }
-section, header, footer { display: flex; flex-direction: column; gap: 1.25rem; min-inline-size: 0; }
-p { margin: 0; max-inline-size: var(--measure); text-wrap: pretty; }
-a { color: var(--color-accent); text-decoration-thickness: from-font; text-underline-position: from-font; }
-a:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; border-radius: 2px; }
-code, kbd { font-family: var(--font-data); font-size: 0.875em; }
-sup { line-height: 0; }
-sup a { font-family: var(--font-data); font-size: 0.75rem; font-weight: 500; text-decoration: none; padding-inline: 0.15em; }
+html { scroll-padding-block-start: 1.5rem; }
+body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--serif); font-size: 1.1875rem; line-height: 1.55; }
+.sheet { max-inline-size: 66rem; margin-inline: auto; padding-inline: max(1.25rem, env(safe-area-inset-left, 0px)) max(1.25rem, env(safe-area-inset-right, 0px)); padding-block: 1.25rem 6rem; }
 
-h1, h2, h3 { font-family: var(--font-display); font-weight: 500; margin: 0; text-wrap: balance; }
-h1 { font-size: clamp(2.5rem, 7vw, 4.25rem); line-height: 1.1; letter-spacing: -0.02em; max-inline-size: 18ch; }
-h2 { font-size: 2rem; line-height: 1.2; letter-spacing: -0.015em; }
-h3 { font-family: var(--font-body); font-size: 1.0625rem; font-weight: 600; line-height: 1.3; }
-.label { font-family: var(--font-data); font-size: 0.75rem; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; color: var(--color-text-secondary); }
-.lede { font-size: 1.25rem; line-height: 1.5; }
+/* Text on the left, the margin on the right. On a narrow sheet the margin note drops under its text. */
+.row { display: grid; grid-template-columns: minmax(0, 38rem) minmax(0, 15rem); column-gap: 4rem; align-items: start; }
+.row + .row { margin-block-start: 1.5rem; }
+.row > aside { font-size: 0.9375rem; line-height: 1.45; color: var(--pencil); display: grid; gap: 0.75rem; }
+@media (max-width: 58rem) {
+  .row { grid-template-columns: minmax(0, 1fr); }
+  .row > aside { margin-block-start: 0.875rem; padding-inline-start: 1rem; border-inline-start: 1px solid var(--rule); }
+}
+section { margin-block-start: 6.5rem; }
+p { margin: 0; text-wrap: pretty; }
+p + p { margin-block-start: 0.875rem; }
+a { color: inherit; text-decoration-color: var(--rubric); text-decoration-thickness: from-font; text-underline-position: from-font; transition: text-decoration-color 150ms ease-out; }
+a:focus-visible { outline: 2px solid var(--rubric); outline-offset: 2px; border-radius: 1px; }
+code, kbd { font-family: var(--mono); font-size: 0.8125em; }
+h1, h2 { font-weight: 500; margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(2.75rem, 7.5vw, 4.75rem); line-height: 1.04; letter-spacing: -0.022em; max-inline-size: 15ch; }
+h2 { font-size: 2.125rem; line-height: 1.15; letter-spacing: -0.015em; margin-block-end: 1.5rem; max-inline-size: 22ch; }
 
-.bar { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.5rem 1.5rem; padding-block-end: 1rem; border-block-end: 1px solid var(--color-border); }
-.wordmark { font-family: var(--font-display); font-size: 1.375rem; font-weight: 500; color: var(--color-text); text-decoration: none; }
-.wordmark sup { color: var(--color-accent); font-family: var(--font-data); font-size: 0.75rem; }
-.bar nav { display: flex; flex-wrap: wrap; gap: 0.25rem 1.5rem; font-size: 0.9375rem; }
+.head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.25rem 1.5rem; padding-block-end: 0.75rem; border-block-end: 1px solid var(--ink); font-size: 1rem; }
+.head strong { font-weight: 600; letter-spacing: 0.01em; }
+.head nav { display: flex; flex-wrap: wrap; gap: 0.25rem 1.5rem; }
+.head a { padding-block: 0.5rem; }
+.title { margin-block-start: 4.5rem; }
+.title p { margin-block-start: 1.5rem; font-size: 1.375rem; line-height: 1.4; max-inline-size: 34rem; }
 
-.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: 1.5rem 2rem; margin: 0; padding-block: 1.5rem; border-block: 1px solid var(--color-border); }
-.stats div { display: flex; flex-direction: column; gap: 0.25rem; }
-.stats dt { order: 2; font-size: 0.9375rem; color: var(--color-text-secondary); line-height: 1.4; }
-.stats dd { margin: 0; font-family: var(--font-display); font-size: 2.5rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
-.stats dd small { font-size: 1.125rem; color: var(--color-text-secondary); }
+/* The proofreader's hand */
+sup.ref, .n { font-family: var(--mono); font-size: 0.6875rem; font-weight: 500; color: var(--rubric); }
+sup.ref { line-height: 0; margin-inline-start: 0.1em; }
+sup.ref a { text-decoration: none; padding: 0.5rem 0.2rem; margin: -0.5rem -0.2rem; }
+aside p { margin: 0; padding: 0.125rem 0.25rem; margin-inline: -0.25rem; border-radius: 2px; transition: background-color 150ms ease-out; }
+aside p.lit, aside p:target { background: var(--mark); color: var(--ink); }
+aside .n { margin-inline-end: 0.375rem; }
+mark { background: var(--mark); color: inherit; padding-block: 0.08em; }
+del { text-decoration: line-through; text-decoration-color: var(--rubric); text-decoration-thickness: 0.09em; color: var(--pencil); }
+.cross, .tick { font-family: var(--mono); font-weight: 500; margin-inline-end: 0.375rem; }
+.cross { color: var(--rubric); }
 
-.steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(13.5rem, 1fr)); gap: 0.75rem; counter-reset: step; }
-.steps li { counter-increment: step; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 0.5rem; padding: 1rem; display: flex; flex-direction: column; gap: 0.375rem; font-size: 0.9375rem; line-height: 1.5; }
-.steps li::before { content: counter(step, decimal-leading-zero); font-family: var(--font-data); font-size: 0.75rem; font-weight: 500; color: var(--color-accent); }
-.steps strong { font-size: 1rem; }
-.steps .outcome { border-color: var(--color-accent); background: var(--color-accent-subtle); }
-.around { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1.5rem 2.5rem; }
-.around > div { display: flex; flex-direction: column; gap: 0.5rem; border-block-start: 1px solid var(--color-border); padding-block-start: 1rem; }
-.around p { font-size: 0.9375rem; }
+/* A specimen: a real question and what came back */
+.specimen { margin-block-start: 3.5rem; padding-block-start: 1.5rem; border-block-start: 1px solid var(--rule); }
+.asked { font-style: italic; color: var(--pencil); }
+.answer { font-size: 1.5rem; line-height: 1.35; margin-block-start: 0.5rem; }
+.draft { list-style: none; margin: 0.75rem 0 0; padding: 0; display: grid; gap: 0.625rem; font-size: 1.25rem; line-height: 1.4; }
+.verdict { margin-block-start: 1.25rem; }
+.passage { font-size: 1rem; line-height: 1.5; color: var(--ink); }
 
-.split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 2rem 3rem; align-items: start; }
-.split > div { display: flex; flex-direction: column; gap: 1rem; min-inline-size: 0; }
-@media (max-width: 46rem) { .split { grid-template-columns: minmax(0, 1fr); } }
+ol.steps { margin: 0; padding: 0; list-style: none; counter-reset: step; columns: 2; column-gap: 2.5rem; }
+ol.steps li { counter-increment: step; break-inside: avoid; padding-block-end: 1rem; padding-inline-start: 1.75rem; position: relative; font-size: 1.0625rem; line-height: 1.45; }
+ol.steps li::before { content: counter(step); position: absolute; inset-inline-start: 0; font-family: var(--mono); font-size: 0.75rem; font-weight: 500; color: var(--rubric); inset-block-start: 0.35em; }
+ol.steps b { font-weight: 600; }
+@media (max-width: 36rem) { ol.steps { columns: 1; } }
 
-.scroll { overflow-x: auto; min-inline-size: 0; }
-table { border-collapse: collapse; inline-size: 100%; font-size: 0.9375rem; line-height: 1.4; }
-table.wide { min-inline-size: 40rem; }  /* scrolls inside its container on a phone instead of crushing its columns */
-caption { caption-side: top; text-align: start; padding-block-end: 0.5rem; font-size: 0.875rem; color: var(--color-text-secondary); }
-th, td { text-align: start; vertical-align: baseline; padding: 0.625rem 1rem 0.625rem 0; border-block-end: 1px solid var(--color-border); }
-thead th { font-family: var(--font-data); font-size: 0.75rem; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; color: var(--color-text-secondary); border-block-end-color: var(--color-text); white-space: nowrap; }
-tbody th { font-weight: 500; }
-.n { text-align: end; font-family: var(--font-data); font-variant-numeric: tabular-nums; white-space: nowrap; }
-td.best, td.effect { color: var(--color-pass); font-weight: 500; }
-td.effect.warn { color: var(--color-warn); }
+/* Tables set the way a book sets them: rules above and below, none between columns */
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; inline-size: 100%; font-size: 1.0625rem; line-height: 1.35; border-block: 1.5px solid var(--ink); }
+.scroll + .scroll { margin-block-start: 2rem; }
+caption { caption-side: top; text-align: start; font-style: italic; color: var(--pencil); padding-block-end: 0.5rem; font-size: 1rem; }
+th, td { text-align: start; vertical-align: baseline; padding: 0.5rem 1.25rem 0.5rem 0; font-weight: 400; }
+th:last-child, td:last-child { padding-inline-end: 0; }
+thead th { font-style: italic; color: var(--pencil); border-block-end: 1px solid var(--ink); font-size: 1rem; white-space: nowrap; }
+tbody tr + tr > * { border-block-start: 1px solid var(--rule); }
+.num { text-align: end; font-variant-numeric: tabular-nums lining-nums; white-space: nowrap; }
+td.top { font-weight: 600; }
+.bar { display: block; block-size: 0.5rem; background: var(--ink); min-inline-size: 2px; }
+td.barcell { inline-size: 40%; vertical-align: middle; }
+table.wide { min-inline-size: 36rem; }
 
-.funnel { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.875rem; margin: 0; padding: 0; list-style: none; }
-.funnel li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.25rem 1rem; align-items: baseline; font-size: 0.9375rem; }
-.funnel .track { grid-column: 1 / -1; block-size: 0.625rem; }
-.funnel .fill { display: block; block-size: 100%; background: var(--color-accent); border-radius: 2px; min-inline-size: 2px; }
-.funnel .fill.pass { background: var(--color-pass); }
+ul.plain { margin: 0; padding-inline-start: 1.125rem; display: grid; gap: 0.5rem; }
+.colophon { margin-block-start: 6.5rem; padding-block-start: 1rem; border-block-start: 1px solid var(--ink); font-size: 1rem; color: var(--pencil); }
 
-.tally { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; font-family: var(--font-data); font-size: 0.875rem; font-variant-numeric: tabular-nums; }
-.cells { display: inline-flex; flex-wrap: wrap; gap: 2px; }
-.cells i { inline-size: 0.5rem; block-size: 0.875rem; border-radius: 1px; background: var(--color-border); }
-.cells i.on { background: var(--color-accent); }
-.rows { display: grid; gap: 0.75rem; }
-.rows > div { display: grid; gap: 0.25rem; font-size: 0.9375rem; }
-.rows .what { color: var(--color-text-secondary); }
-
-.chip { display: inline-block; font-family: var(--font-data); font-size: 0.75rem; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; padding: 0.125rem 0.5rem; border-radius: 0.25rem; white-space: nowrap; }
-.chip.pass { color: var(--color-pass); background: var(--color-pass-subtle); }
-.chip.fail { color: var(--color-fail); background: var(--color-fail-subtle); }
-.chip.warn { color: var(--color-warn); background: var(--color-warn-subtle); }
-
-.notes { margin: 0; padding-inline-start: 1.5rem; display: grid; gap: 0.75rem; font-size: 0.9375rem; line-height: 1.5; }
-.notes li { max-inline-size: 78ch; overflow-wrap: break-word; }
-.notes li:target { background: var(--color-accent-subtle); outline: 0.375rem solid var(--color-accent-subtle); border-radius: 2px; }
-ul.plain { margin: 0; padding-inline-start: 1.125rem; display: grid; gap: 0.5rem; max-inline-size: var(--measure); }
-footer { border-block-start: 1px solid var(--color-border); padding-block-start: 1.5rem; color: var(--color-text-secondary); font-size: 0.9375rem; }
-@media (hover: hover) { a:hover { text-decoration-thickness: 2px; } }
+@media (hover: hover) { a:hover { text-decoration-thickness: 0.12em; } }
 </style>
 </head>
 <body>
-<div class="page">
+<div class="sheet">
 
-<div class="bar">
-  <a class="wordmark" href="#top">footnoted<sup>1</sup></a>
+<div class="head">
+  <strong>footnoted</strong>
   <nav aria-label="Project links">
     <a href="https://github.com/Lokendrakushwah12/footnoted">Source</a>
     <a href="https://github.com/Lokendrakushwah12/thirdshift/blob/master/docs/teardown.md">Teardown</a>
@@ -130,186 +110,184 @@ footer { border-block-start: 1px solid var(--color-border); padding-block-start:
   </nav>
 </div>
 
-<header id="top">
-  <span class="label">Question answering over documentation</span>
+<header class="title">
   <h1>Answers that quote their source, or say they don’t know.</h1>
-  <p class="lede">footnoted answers questions over 1,040 pages of Python, MCP and Claude documentation. Every claim must carry a quote that is checked against the page, and a question the docs cannot answer is declined. Every figure on this page has a footnote to the file and command that produced it.</p>
-  <dl class="stats">
-    <div><dd>11<small> of 12</small></dd><dt>unanswerable questions declined<sup><a href="#fn2">2</a></sup></dt></div>
-    <div><dd>31<small> of 72</small></dd><dt>answerable questions answered citing an expected page<sup><a href="#fn2">2</a></sup></dt></div>
-    <div><dd>6.2<small> s</small></dd><dt>mean time per question on a laptop<sup><a href="#fn2">2</a></sup></dt></div>
-    <div><dd>$0</dd><dt>spent: a free 3B model running locally</dt></div>
-  </dl>
+  <p>footnoted answers questions over 1,040 pages of Python, MCP and Claude documentation, using a free model on a laptop.</p>
 </header>
 
+<div class="specimen row">
+  <div>
+    <p class="asked">How do I create a temporary directory that is deleted automatically when I’m done with it?</p>
+    <p class="answer">To create a temporary directory that is deleted automatically when done, use ‘tempfile.TemporaryDirectory’.<sup class="ref"><a href="#n1">1</a></sup></p>
+  </div>
+  <aside>
+    <p id="n1" class="passage"><span class="n">1</span>The “tempfile” module has a new context manager, <mark>“TemporaryDirectory” which provides easy deterministic cleanup of temporary directories</mark>:</p>
+    <p>What’s New in Python 3.2, “tempfile”. The highlighted words are the quote the model gave. They were found in the page, so the claim was kept.</p>
+  </aside>
+</div>
+
+<section id="proofread">
+  <h2>Every draft is proofread before you see it</h2>
+  <div class="row">
+    <div>
+      <p>The model does not answer in prose. It returns claims, and each claim must name a passage and quote it. A claim whose quote cannot be found is struck. A second pass then asks whether what is left answers the question. Here is a real draft, as it was marked.</p>
+    </div>
+    <aside><p>Unedited output from one run. The question is in the eval set, and the docs do contain the answer.</p></aside>
+  </div>
+  <div class="specimen row">
+    <div>
+      <p class="asked">How do I count how many times each element appears in a list?</p>
+      <ul class="draft">
+        <li><del>To count how many times an element appears in a list, use the ‘count’ method.</del><sup class="ref"><a href="#n2">2</a></sup></li>
+        <li><del>To count elements in a list and return them in a specific order, use the ‘most_common’ method.</del><sup class="ref"><a href="#n3">3</a></sup></li>
+        <li><del>To count elements in a list and return them in their order of first encounter, use the ‘elements’ method.</del><sup class="ref"><a href="#n4">4</a></sup></li>
+      </ul>
+      <p class="verdict">Nothing survived, so the search was rewritten and run twice more. Six claims were struck in all, and the reply was: <em>I can’t answer that from the indexed documentation.</em></p>
+    </div>
+    <aside>
+      <p id="n2"><span class="n">2</span><span class="cross">✗</span>Its quote, “list.count(value, /) -> int”, is in none of the five passages retrieved.</p>
+      <p id="n3"><span class="n">3</span><span class="cross">✗</span>Its quote joins two parts of the page that are not next to each other.</p>
+      <p id="n4"><span class="n">4</span><span class="tick">✓</span>Quote found in the “Counter objects” section. <span class="cross">✗</span>The second pass ruled that it does not answer the question.</p>
+      <p>This is the cost of the design. The right answer, <code>collections.Counter</code>, was on the page, and the system declined anyway.</p>
+    </aside>
+  </div>
+</section>
+
 <section id="architecture">
-  <span class="label">Architecture</span>
-  <h2>One question, eight steps</h2>
-  <p>There is no framework underneath. The index is one SQLite file and a numpy matrix, the model is Qwen 2.5 3B served by Ollama, and the whole project is 1,438 lines of Python.</p>
-  <ol class="steps">
-    <li><strong>Chunk</strong>Pages are split on headings into pieces of at most 1,200 characters, each prefixed with its page title and section.</li>
-    <li><strong>Index</strong>31,777 chunks go into SQLite FTS5 for BM25 and into a matrix of bge-small vectors.</li>
-    <li><strong>Retrieve</strong>Keyword and vector rankings are fused, with vectors weighted double and at most two chunks per page.</li>
-    <li><strong>Budget</strong>The context assembler fits instructions, question and passages into the model’s 4,096-token window. It cannot overflow.</li>
-    <li><strong>Draft</strong>The model answers as a list of claims. Each claim names a passage and quotes it.</li>
-    <li><strong>Ground</strong>A claim is kept only if its quote’s words appear, in order, in a retrieved passage.</li>
-    <li><strong>Verify</strong>A second call checks that the claims answer the question and that each one is backed by its quote.</li>
-    <li class="outcome"><strong>Answer, or decline</strong>If nothing survives, the query is rewritten and retried twice. After that the system says it cannot answer.</li>
-  </ol>
-  <div class="around">
-    <div><h3>Memory</h3><p>The last four turns are kept verbatim. Older ones are compressed into summaries and durable facts with an expiry date, and used to rewrite a follow-up such as “how do I make it ignore case?” into a full question.</p></div>
-    <div><h3>Knowledge graph</h3><p>394 entities and 496 relations extracted from the MCP specification, walked two hops from the entities a question names. Built and measured, and not wired into answering, for the reason given below.</p></div>
-    <div><h3>Eval gate</h3><p>Every run records its path through the steps above. CI fails a change whose scores fall below the accepted run, whose path is illegal, or whose scorecard is older than the code.</p></div>
+  <h2>One question takes eight steps</h2>
+  <div class="row">
+    <div>
+      <ol class="steps">
+        <li><b>Chunk.</b> Pages are split on headings into pieces of at most 1,200 characters.</li>
+        <li><b>Index.</b> 31,777 chunks go into SQLite for keyword search and a matrix of vectors.</li>
+        <li><b>Retrieve.</b> The two rankings are fused, at most two chunks from any page.</li>
+        <li><b>Budget.</b> Instructions, question and passages are fitted to the model’s window.</li>
+        <li><b>Draft.</b> The model writes claims, each with a passage number and a quote.</li>
+        <li><b>Ground.</b> A claim is kept only if its quote’s words appear, in order, in a passage.</li>
+        <li><b>Verify.</b> A second call checks that the claims answer the question.</li>
+        <li><b>Answer or decline.</b> Nothing left means two rewritten searches, then a refusal.</li>
+      </ol>
+    </div>
+    <aside>
+      <p>1,438 lines of Python. The index is one SQLite file and one array. The model is Qwen 2.5 3B, served by Ollama. There is no framework, vector database or API key.</p>
+      <p>Around the loop: a three-tier memory that rewrites follow-up questions, a knowledge graph of the MCP specification, and a gate in CI that fails a change which makes the answers worse.</p>
+    </aside>
   </div>
 </section>
 
 <section id="measured">
-  <span class="label">Measured</span>
   <h2>Where the answers are lost</h2>
-  <p>The gate grades every step, so a weak result can be traced to the step that caused it. Retrieval puts an expected page in front of the model for 60 of 72 questions. The model turns that into an answer citing it for 31.<sup><a href="#fn2">2</a></sup></p>
-  <div class="split">
+  <div class="row">
     <div>
-      <ul class="funnel" aria-label="Answerable questions surviving each step, out of 72">
-        <li><span>Answerable questions</span><span class="n">72</span><span class="track"><span class="fill" style="inline-size:100%"></span></span></li>
-        <li><span>An expected page reached the model</span><span class="n">60</span><span class="track"><span class="fill" style="inline-size:83.3%"></span></span></li>
-        <li><span>Answered at all</span><span class="n">54</span><span class="track"><span class="fill" style="inline-size:75%"></span></span></li>
-        <li><span>Answered citing an expected page</span><span class="n">31</span><span class="track"><span class="fill pass" style="inline-size:43.1%"></span></span></li>
-      </ul>
-      <p>Of 171 claims the model drafted, 135 had a quote that could be found and 80 survived the second check. The 18 answerable questions it declined are the price of declining 11 of the 12 it should.</p>
-    </div>
-    <div class="scroll">
-      <table>
-        <caption>Recall@5: an expected page among the top five results<sup><a href="#fn1">1</a></sup></caption>
-        <thead><tr><th>Search mode</th><th class="n">Python docs</th><th class="n">MCP + Claude</th><th class="n">Median</th></tr></thead>
-        <tbody>
-          <tr><th>BM25</th><td class="n">0.78</td><td class="n">0.65</td><td class="n">14 ms</td></tr>
-          <tr><th>Dense</th><td class="n">0.85</td><td class="n best">0.73</td><td class="n">10 ms</td></tr>
-          <tr><th>Hybrid</th><td class="n best">0.87</td><td class="n">0.58</td><td class="n">20 ms</td></tr>
-          <tr><th>Hybrid + rerank</th><td class="n">0.85</td><td class="n">0.65</td><td class="n">548 ms</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <div class="split">
-    <div>
-      <h3>Memory helps follow-ups and leaves complete questions alone<sup><a href="#fn4">4</a></sup></h3>
-      <div class="rows">
-        <div><span class="what">Follow-up questions, searched as typed</span><span class="tally" data-n="8" data-of="14">8 of 14 found</span></div>
-        <div><span class="what">Follow-up questions, rewritten with memory</span><span class="tally" data-n="11" data-of="14">11 of 14 found</span></div>
-        <div><span class="what">Complete questions after an unrelated turn, with memory</span><span class="tally" data-n="10" data-of="10">10 of 10 found</span></div>
+      <p>The gate grades every step, so a weak result can be traced to the step that caused it. Search does its job for 60 of 72 questions. The model turns that into 31 answers that cite the right page.<sup class="ref"><a href="#n5">5</a></sup></p>
+      <div class="scroll" style="margin-block-start:1.5rem">
+        <table>
+          <caption>Answerable questions surviving each step</caption>
+          <tbody>
+            <tr><td>Asked</td><td class="num">72</td><td class="barcell"><span class="bar" style="inline-size:100%"></span></td></tr>
+            <tr><td>A right page reached the model</td><td class="num">60</td><td class="barcell"><span class="bar" style="inline-size:83.3%"></span></td></tr>
+            <tr><td>Answered at all</td><td class="num">54</td><td class="barcell"><span class="bar" style="inline-size:75%"></span></td></tr>
+            <tr><td>Answered citing a right page</td><td class="num top">31</td><td class="barcell"><span class="bar" style="inline-size:43.1%"></span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="scroll">
+        <table>
+          <caption>A right page among the top five results<sup class="ref"><a href="#n6">6</a></sup></caption>
+          <thead><tr><th>Search</th><th class="num">Python docs</th><th class="num">MCP and Claude</th><th class="num">Median time</th></tr></thead>
+          <tbody>
+            <tr><td>Keyword</td><td class="num">0.78</td><td class="num">0.65</td><td class="num">14 ms</td></tr>
+            <tr><td>Vector</td><td class="num">0.85</td><td class="num top">0.73</td><td class="num">10 ms</td></tr>
+            <tr><td>Both, fused</td><td class="num top">0.87</td><td class="num">0.58</td><td class="num">20 ms</td></tr>
+            <tr><td>Fused, then reranked</td><td class="num">0.85</td><td class="num">0.65</td><td class="num">548 ms</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
-    <div>
-      <h3>The knowledge graph added nothing a narrower search did not<sup><a href="#fn5">5</a></sup></h3>
-      <div class="rows">
-        <div><span class="what">Two-page questions, hybrid search</span><span class="tally" data-n="7" data-of="12">7 of 12</span></div>
-        <div><span class="what">Hybrid search plus the graph</span><span class="tally" data-n="7" data-of="12">7 of 12</span></div>
-        <div><span class="what">Hybrid search limited to the graph’s 29 pages</span><span class="tally" data-n="11" data-of="12">11 of 12</span></div>
-      </div>
-    </div>
+    <aside>
+      <p id="n5"><span class="n">5</span><code>evals/golden.json</code>, 84 questions. Run <code>uv run footnoted gate record</code>.</p>
+      <p>Of 12 questions the docs cannot answer, 11 were declined. Of 171 claims drafted, 135 had a quote that was found and 80 passed the second check.</p>
+      <p id="n6"><span class="n">6</span><code>evals/python.jsonl</code>, 46 questions, and <code>evals/docs.jsonl</code>, 26. Run <code>uv run footnoted eval</code> on both.</p>
+      <p>Memory, measured the same way: follow-up questions found rose from 8 to 11 of 14, and complete questions stayed at 10 of 10.</p>
+    </aside>
   </div>
 </section>
 
 <section id="efficiency">
-  <span class="label">Efficiency</span>
-  <h2>Four decisions the measurements made</h2>
-  <p>Each row is a choice between a heavier option and a lighter one. In all four the lighter option won or tied, and that is what ships.</p>
-  <div class="scroll">
-    <table class="wide">
-      <thead><tr><th>Decision</th><th>Heavier option</th><th>What ships</th><th>Effect</th></tr></thead>
-      <tbody>
-        <tr><th>How many passages to give the model<sup><a href="#fn3">3</a></sup></th><td>As many as fit: 28 answers, 16.1 s each</td><td>Five: 32 answers, 5.7 s each</td><td class="effect">4 more answers, 65% less time</td></tr>
-        <tr><th>Reranking the results<sup><a href="#fn1">1</a></sup></th><td>Cross-encoder: 0.85 and 0.65 recall, 548 ms</td><td>None: 0.87 and 0.73 from the best first stage, 20 ms</td><td class="effect">27× faster, higher recall</td></tr>
-        <tr><th>Question words in keyword search<sup><a href="#fn1">1</a></sup></th><td>Kept: 0.61 recall</td><td>Dropped: 0.78 recall</td><td class="effect">+0.17 recall</td></tr>
-        <tr><th>Using the knowledge graph to answer<sup><a href="#fn5">5</a></sup></th><td>Graph plus search: 7 of 12</td><td>Search alone, scoped: 11 of 12</td><td class="effect warn">Graph left out of answering</td></tr>
-      </tbody>
-    </table>
+  <h2>Four times the lighter option won</h2>
+  <div class="row">
+    <div>
+      <div class="scroll">
+        <table class="wide">
+          <thead><tr><th>Choice</th><th>Heavier</th><th>What ships</th></tr></thead>
+          <tbody>
+            <tr><td>Passages given to the model<sup class="ref"><a href="#n7">7</a></sup></td><td>As many as fit: 28 answers, 16.1 s each</td><td class="top">Five: 32 answers, 5.7 s each</td></tr>
+            <tr><td>Reranking the results</td><td>0.85 and 0.65, in 548 ms</td><td class="top">None: 0.87 and 0.73, in 20 ms</td></tr>
+            <tr><td>Question words in keyword search</td><td>Kept: 0.61</td><td class="top">Dropped: 0.78</td></tr>
+            <tr><td>Answering with the knowledge graph<sup class="ref"><a href="#n8">8</a></sup></td><td>Graph plus search: 7 of 12</td><td class="top">Search limited to the same pages: 11 of 12</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <aside>
+      <p id="n7"><span class="n">7</span>Two full runs of the same 84 questions. Five passages gave four more answers in 65% less time.</p>
+      <p id="n8"><span class="n">8</span><code>evals/graph.jsonl</code>, 12 questions that each need two pages. The graph is built and measured, and left out of answering.</p>
+    </aside>
   </div>
 </section>
 
 <section id="cost">
-  <span class="label">Money and time</span>
   <h2>What it costs to run</h2>
-  <div class="split">
+  <div class="row">
     <div>
-      <h3>Money</h3>
-      <p>Nothing was spent. The model is free and runs on the laptop, the index is two 47 MB files, and there is no hosted service, vector database or API key anywhere in the stack.</p>
-      <p>Token totals per question were not recorded, so there is no per-question price to quote. What is known: the largest prompt sent was 1,886 tokens and every reply is capped at 600.<sup><a href="#fn3">3</a></sup> A hosted model is a change of three environment variables.</p>
+      <p>Nothing was spent. The model is free and local, the index is two 47 MB files, and no hosted service is involved. Token counts per question were not recorded, so there is no per-question price to quote; the largest prompt was 1,886 tokens and replies are capped at 600.</p>
+      <div class="scroll" style="margin-block-start:1.5rem">
+        <table>
+          <caption>Time on an M4 Pro laptop</caption>
+          <tbody>
+            <tr><td>One search</td><td class="num">20 ms</td></tr>
+            <tr><td>One question, answered or declined</td><td class="num">6.2 s mean, 4.9 s median</td></tr>
+            <tr><td>Recording the eval scorecard</td><td class="num">about 9 min</td></tr>
+            <tr><td>Building the index, once</td><td class="num">30 min</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
-    <div class="scroll">
-      <table>
-        <caption>Time, on an M4 Pro</caption>
-        <thead><tr><th>Operation</th><th class="n">Time</th></tr></thead>
-        <tbody>
-          <tr><th>One search, hybrid<sup><a href="#fn1">1</a></sup></th><td class="n">20 ms</td></tr>
-          <tr><th>One question, answered or declined<sup><a href="#fn2">2</a></sup></th><td class="n">6.2 s mean, 4.9 s median</td></tr>
-          <tr><th>Recording the eval scorecard, 84 questions<sup><a href="#fn2">2</a></sup></th><td class="n">about 9 min</td></tr>
-          <tr><th>Building the index, 31,777 chunks<sup><a href="#fn6">6</a></sup></th><td class="n">30 min, once</td></tr>
-          <tr><th>The gate’s check in CI<sup><a href="#fn7">7</a></sup></th><td class="n">no model needed</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-  <p>34 of the 84 questions were settled with one retrieval, 17 needed a rewritten query and 33 used all three attempts.<sup><a href="#fn2">2</a></sup></p>
-</section>
-
-<section id="impact">
-  <span class="label">Impact</span>
-  <h2>What this is evidence of, and what it is not</h2>
-  <p>footnoted has no users. Its impact is what the measurements show and the decisions they changed.</p>
-  <div class="split">
-    <div>
-      <h3>What held up</h3>
-      <ul class="plain">
-        <li><strong>Declining works.</strong> 11 of 12 questions the docs cannot answer were declined, including five about third-party Python libraries the model knows well.</li>
-        <li><strong>The gate catches regressions.</strong> Re-recording unchanged code moved the score by one question and passed. Cutting retrieval to one passage moved it from 31 to 19 and failed, listing each question that got worse.<sup><a href="#fn7">7</a></sup></li>
-        <li><strong>Memory resolves follow-ups</strong> without harming complete questions.</li>
-      </ul>
-    </div>
-    <div>
-      <h3>What did not, and the limits</h3>
-      <ul class="plain">
-        <li><strong>The 3B model is the ceiling.</strong> It converts 60 good retrievals into 31 grounded answers. A larger model is untested.</li>
-        <li><strong>Reranking and the knowledge graph did not earn their place.</strong></li>
-        <li><strong>The evals are small and were written by the builder:</strong> 84 questions, 30 memory cases and 26 graph cases. Retrieval settings were tuned on the questions they are reported on.</li>
-        <li><strong>The gate’s model judge failed calibration,</strong> agreeing with a key-term check on 26 of 34 answers, so it is reported and never gated on.<sup><a href="#fn2">2</a></sup></li>
-      </ul>
-    </div>
+    <aside>
+      <p>Of 84 questions, 34 were settled by the first search, 17 needed one rewrite and 33 used all three attempts.</p>
+      <p>The check that runs in CI needs no model. It compares a recorded scorecard with the accepted one.</p>
+    </aside>
   </div>
 </section>
 
-<section id="notes">
-  <span class="label">Footnotes</span>
-  <h2>Where each number comes from</h2>
-  <ol class="notes">
-    <li id="fn1">Retrieval evals: <a href="https://github.com/Lokendrakushwah12/footnoted/blob/master/evals/python.jsonl"><code>evals/python.jsonl</code></a> (46 questions) and <a href="https://github.com/Lokendrakushwah12/footnoted/blob/master/evals/docs.jsonl"><code>evals/docs.jsonl</code></a> (26). Run <code>uv run footnoted eval evals/python.jsonl evals/docs.jsonl</code>. Median times are for the Python set. The 0.61 figure is the same eval before question words were dropped.</li>
-    <li id="fn2">The accepted answer-loop run: <a href="https://github.com/Lokendrakushwah12/footnoted/blob/master/evals/golden.json"><code>evals/golden.json</code></a>, 72 answerable and 12 unanswerable questions. Run <code>uv run footnoted gate record</code>, which takes about nine minutes and needs the local model.</li>
-    <li id="fn3">Two full runs of the same 84 questions, one capped at five passages and one offered twelve. The eval prints the largest real prompt. Described in the <a href="https://github.com/Lokendrakushwah12/footnoted#context-budget">README, “Context budget”</a>.</li>
-    <li id="fn4"><a href="https://github.com/Lokendrakushwah12/footnoted/blob/master/evals/memory.jsonl"><code>evals/memory.jsonl</code></a>, 30 cases. Run <code>uv run footnoted eval-memory evals/memory.jsonl -v</code>.</li>
-    <li id="fn5"><a href="https://github.com/Lokendrakushwah12/footnoted/blob/master/evals/graph.jsonl"><code>evals/graph.jsonl</code></a>, 12 two-page questions and 14 controls. Run <code>uv run footnoted graph build</code>, then <code>uv run footnoted eval-graph evals/graph.jsonl</code>.</li>
-    <li id="fn6">Timed once with <code>time uv run footnoted ingest</code>. This is slower than the embedding model should be and has not been investigated.</li>
-    <li id="fn7"><code>uv run footnoted gate check</code> compares <code>evals/scorecard.json</code> with <code>evals/golden.json</code> and runs on every push in <a href="https://github.com/Lokendrakushwah12/footnoted/blob/master/.github/workflows/gate.yml">GitHub Actions</a>. Both directions of the test are in the <a href="https://github.com/Lokendrakushwah12/footnoted#eval-gate">README, “Eval gate”</a>.</li>
-  </ol>
+<section id="limits">
+  <h2>What this is not evidence of</h2>
+  <div class="row">
+    <div>
+      <ul class="plain">
+        <li>footnoted has no users. Its effect is what the measurements show.</li>
+        <li>The model is the ceiling: 60 good searches become 31 grounded answers. A larger model is untested.</li>
+        <li>The evals are small and were written by the builder, and the search settings were tuned on the questions they are reported on.</li>
+        <li>The gate’s model judge agreed with a key-term check on 26 of 34 answers, so it is reported and never gated on.</li>
+      </ul>
+    </div>
+    <aside><p>Re-recording unchanged code moved the score by one question and passed the gate. Cutting search to one passage moved it from 31 to 19 and failed, naming each question that got worse.</p></aside>
+  </div>
 </section>
 
-<footer>
-  <p>footnoted is half of a pair. <a href="https://github.com/Lokendrakushwah12/thirdshift">thirdshift</a> is the runtime that serves it as tools, and the <a href="https://github.com/Lokendrakushwah12/thirdshift/blob/master/docs/teardown.md">teardown</a> gives the verdict on every technique in both.</p>
-</footer>
+<p class="colophon">Set in Newsreader and JetBrains Mono. Every number here comes from a file in <a href="https://github.com/Lokendrakushwah12/footnoted">the repository</a>; the <a href="https://github.com/Lokendrakushwah12/thirdshift/blob/master/docs/teardown.md">teardown</a> covers this project and thirdshift together.</p>
 
 </div>
 <script>
-// One cell per question; the counted ones are filled. The text beside it stays as the label.
-for (const tally of document.querySelectorAll(".tally[data-of]")) {
-  const cells = document.createElement("span");
-  cells.className = "cells";
-  cells.setAttribute("aria-hidden", "true");
-  for (let i = 0; i < Number(tally.dataset.of); i++) {
-    const cell = document.createElement("i");
-    if (i < Number(tally.dataset.n)) cell.className = "on";
-    cells.appendChild(cell);
-  }
-  tally.prepend(cells);
+// Pointing at a reference numeral lights its note in the margin.
+for (const ref of document.querySelectorAll("sup.ref a")) {
+  const note = document.querySelector(ref.getAttribute("href"));
+  if (!note) continue;
+  const light = on => () => note.classList.toggle("lit", on);
+  ref.addEventListener("mouseenter", light(true));
+  ref.addEventListener("mouseleave", light(false));
+  ref.addEventListener("focus", light(true));
+  ref.addEventListener("blur", light(false));
 }
 </script>
 </body>
